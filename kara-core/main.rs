@@ -1,5 +1,6 @@
 mod cli;
 mod debug;
+mod wgpu;
 
 fn main() {
     let (_guard, interface) = debug::initialise();
