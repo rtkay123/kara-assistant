@@ -8,6 +8,8 @@ fn main() {
         cli::Interface::Cli => {
             println!("Hello, world!");
         }
-        cli::Interface::Gui => {}
+        cli::Interface::Gui => {
+            wgpu::start().unwrap();
+        }
     }
 }
