@@ -25,8 +25,12 @@ use iced_winit::{
 use self::{controls::Controls, scene::Scene};
 
 pub fn start() -> anyhow::Result<()> {
+    let title = env!("CARGO_BIN_NAME");
+    let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);
     let event_loop = EventLoop::new();
     let window = Window::new(&event_loop)?;
+    window.set_title(&title);
+    window.set_decorations(false);
     let physical_size = window.inner_size();
     let mut viewport = Viewport::with_physical_size(
         iced_winit::Size {
@@ -282,12 +286,11 @@ mod controls {
                     .align_items(iced_winit::Alignment::Center)
                     .spacing(20)
                     .padding(10)
-                    .push(Text::new(&self.text).color(Color::new(
-                        0.949_019_6,
-                        0.898_039_2,
-                        0.737_254_9,
-                        1.0,
-                    ))),
+                    .push(
+                        Text::new(&self.text)
+                            .color(Color::new(0.949_019_6, 0.898_039_2, 0.737_254_9, 1.0))
+                            .size(28),
+                    ),
             )
             .padding(100)
             .width(Length::Fill)
