@@ -230,8 +230,9 @@ pub fn start() -> anyhow::Result<()> {
 mod controls {
     use iced_wgpu::Renderer;
     use iced_winit::{
-        widget::{Column, Container, Row, Text},
-        Color, Program,
+        alignment,
+        widget::{Column, Container, Text},
+        Color, Length, Program,
     };
 
     pub struct Controls {
@@ -239,6 +240,7 @@ mod controls {
         text: String,
     }
 
+    #[allow(dead_code)]
     #[derive(Debug, Clone)]
     pub enum Message {
         TextChanged(String),
@@ -248,9 +250,9 @@ mod controls {
         pub fn new() -> Self {
             Self {
                 background_color: Color {
-                    r: 0.4,
-                    g: 0.4,
-                    b: 0.4,
+                    r: 0.156_862_75,
+                    g: 0.156_862_75,
+                    b: 0.156_862_75,
                     a: 1.0,
                 },
                 text: String::from("Hey there"),
@@ -275,18 +277,24 @@ mod controls {
         }
 
         fn view(&mut self) -> iced_winit::Element<'_, Self::Message, Self::Renderer> {
-            let content = Row::new()
-                .width(iced_winit::Length::Fill)
-                .height(iced_winit::Length::Fill)
-                .push(Column::new().width(iced_winit::Length::Fill).push(
-                    Text::new(&self.text).color(Color::new(
+            Container::new(
+                Column::new()
+                    .align_items(iced_winit::Alignment::Center)
+                    .spacing(20)
+                    .padding(10)
+                    .push(Text::new(&self.text).color(Color::new(
                         0.949_019_6,
                         0.898_039_2,
                         0.737_254_9,
                         1.0,
-                    )),
-                ));
-            Container::new(content).into()
+                    ))),
+            )
+            .padding(100)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_y(alignment::Vertical::Bottom)
+            .center_x()
+            .into()
         }
     }
 }
