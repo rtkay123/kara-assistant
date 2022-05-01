@@ -1,4 +1,4 @@
-use std::sync::mpsc;
+use std::sync::{mpsc, Arc};
 
 use iced_wgpu::{
     wgpu::{
@@ -27,11 +27,13 @@ use iced_winit::{
     Clipboard, Debug, Size,
 };
 use kara_audio::Config;
+use tokio::runtime::Handle;
 use tracing::{error, trace};
 
 use self::{controls::Controls, scene::Scene};
 
-pub fn start() -> anyhow::Result<()> {
+pub async fn start() -> anyhow::Result<()> {
+    let handle = Handle::current();
     let stream = kara_audio::visualiser_stream(Config::default());
     let title = env!("CARGO_BIN_NAME");
     let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);
@@ -54,32 +56,52 @@ pub fn start() -> anyhow::Result<()> {
     // Initialise wgpu
     let default_backend = Backends::PRIMARY;
     let backend = backend_bits_from_env().unwrap_or(default_backend);
-    let instance = Instance::new(backend);
+    let backend = Arc::new(backend);
+    let instance = Instance::new(*backend);
+    let instance = Arc::new(instance);
     let surface = unsafe { instance.create_surface(&window) };
-    let (format, (device, queue)) = executor::block_on(async {
-        let adapter = initialize_adapter_from_env_or_default(&instance, backend, Some(&surface))
-            .await
-            .expect("No suitable GPU adapters found in the system");
-        trace!("using gpu adapter: {:?}", &adapter);
-        let adapter_features = adapter.features();
-        let needed_limits = Limits::default();
-        (
-            surface
-                .get_preferred_format(&adapter)
-                .expect("get preferred format"),
-            adapter
-                .request_device(
-                    &DeviceDescriptor {
-                        label: None,
-                        features: adapter_features & Features::default(),
-                        limits: needed_limits,
-                    },
-                    None,
-                )
+    let surface = Arc::new(surface);
+    let inner_surface = Arc::clone(&surface);
+    let inner_instance = Arc::clone(&instance);
+    let inner_backend = Arc::clone(&backend);
+
+    let (format, (device, queue)) = tokio::task::spawn_blocking(move || {
+        executor::block_on(async {
+            handle
+                .spawn(async move {
+                    let adapter = initialize_adapter_from_env_or_default(
+                        &inner_instance,
+                        *inner_backend,
+                        Some(&inner_surface),
+                    )
+                    .await
+                    .expect("No suitable GPU adapters found in the system");
+                    trace!("using gpu adapter: {:?}", &adapter);
+                    let adapter_features = adapter.features();
+                    let needed_limits = Limits::default();
+                    (
+                        inner_surface
+                            .get_preferred_format(&adapter)
+                            .expect("get preferred format"),
+                        adapter
+                            .request_device(
+                                &DeviceDescriptor {
+                                    label: None,
+                                    features: adapter_features & Features::default(),
+                                    limits: needed_limits,
+                                },
+                                None,
+                            )
+                            .await
+                            .expect("request device"),
+                    )
+                })
                 .await
-                .expect("request device"),
-        )
-    });
+                .expect("Task spawned in Tokio executor panicked")
+        })
+    })
+    .await
+    .unwrap();
     surface.configure(
         &device,
         &SurfaceConfiguration {

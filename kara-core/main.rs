@@ -2,14 +2,15 @@ mod cli;
 mod debug;
 mod wgpu;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     let (_guard, interface) = debug::initialise();
     match interface {
         cli::Interface::Cli => {
             println!("Hello, world!");
         }
         cli::Interface::Gui => {
-            wgpu::start().unwrap();
+            wgpu::start().await.unwrap();
         }
     }
 }

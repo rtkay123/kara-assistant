@@ -33,7 +33,7 @@ impl Default for Config {
             density_reduction: 5,
             //max_frequency: 20_000,
             max_frequency: 12_500,
-            volume: 3.0,
+            volume: 3.2,
         }
     }
 }
