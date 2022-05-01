@@ -23,7 +23,7 @@ impl Args {
                 DebugMode::Warn => Level::WARN,
                 DebugMode::Error => Level::ERROR,
             },
-            None => Level::WARN,
+            None => Level::TRACE,
         }
     }
 

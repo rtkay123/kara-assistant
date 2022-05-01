@@ -1,6 +1,11 @@
+use std::sync::mpsc;
+
 use iced_wgpu::{
     wgpu::{
-        util::{backend_bits_from_env, initialize_adapter_from_env_or_default, StagingBelt},
+        self,
+        util::{
+            backend_bits_from_env, initialize_adapter_from_env_or_default, DeviceExt, StagingBelt,
+        },
         Backends, CommandEncoderDescriptor, DeviceDescriptor, Features, Instance, Limits,
         PresentMode, SurfaceConfiguration, SurfaceError, TextureUsages, TextureViewDescriptor,
     },
@@ -21,10 +26,12 @@ use iced_winit::{
     },
     Clipboard, Debug, Size,
 };
+use kara_audio::Config;
 
 use self::{controls::Controls, scene::Scene};
 
 pub fn start() -> anyhow::Result<()> {
+    let stream = kara_audio::visualiser_stream(Config::default());
     let title = env!("CARGO_BIN_NAME");
     let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);
     let event_loop = EventLoop::new();
@@ -173,6 +180,38 @@ pub fn start() -> anyhow::Result<()> {
                             .create_command_encoder(&CommandEncoderDescriptor { label: None });
 
                         let program = state.program();
+                        let (tx, rx) = mpsc::channel();
+                        stream
+                            .send(kara_audio::stream::Event::RequestData(tx))
+                            .unwrap();
+                        let mut buffer = rx.recv().unwrap();
+                        for i in 0..buffer.len() {
+                            buffer.insert(0, buffer[i * 2]);
+                        }
+
+                        let (vertices, indices) = graphics::from_buffer(
+                            buffer,
+                            1.0,
+                            [1.0, 0.0, 0.0],
+                            [0.0, 0.0, 0.05],
+                            [
+                                window.inner_size().width as f32 * 0.001,
+                                window.inner_size().height as f32 * 0.001,
+                            ],
+                        );
+
+                        let vertex_buffer =
+                            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                label: Some("Vertex Buffer"),
+                                contents: bytemuck::cast_slice(&vertices),
+                                usage: wgpu::BufferUsages::VERTEX,
+                            });
+                        let index_buffer =
+                            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                                label: Some("Index Buffer"),
+                                contents: bytemuck::cast_slice(&indices),
+                                usage: wgpu::BufferUsages::INDEX,
+                            });
 
                         let view = frame.texture.create_view(&TextureViewDescriptor::default());
 
@@ -182,7 +221,12 @@ pub fn start() -> anyhow::Result<()> {
                                 scene.clear(&view, &mut encoder, program.background_color());
 
                             // Draw the scene
-                            scene.draw(&mut render_pass);
+                            scene.draw(
+                                &mut render_pass,
+                                &vertex_buffer,
+                                &index_buffer,
+                                indices.len(),
+                            );
                         }
 
                         // And then iced on top
@@ -200,7 +244,9 @@ pub fn start() -> anyhow::Result<()> {
 
                         // Then we submit the work
                         staging_belt.finish();
-                        queue.submit(Some(encoder.finish()));
+                        //                 queue.submit(Some(encoder.finish()));
+
+                        queue.submit(std::iter::once(encoder.finish()));
                         frame.present();
 
                         // Update the mouse cursor
@@ -226,6 +272,7 @@ pub fn start() -> anyhow::Result<()> {
                         }
                     },
                 }
+                window.request_redraw()
             }
             _ => {}
         }
@@ -254,9 +301,9 @@ mod controls {
         pub fn new() -> Self {
             Self {
                 background_color: Color {
-                    r: 0.156_862_75,
-                    g: 0.156_862_75,
-                    b: 0.156_862_75,
+                    r: 0.0,
+                    g: 0.0,
+                    b: 0.0,
                     a: 1.0,
                 },
                 text: String::from("Hey there"),
@@ -305,6 +352,8 @@ mod controls {
 mod scene {
     use iced_wgpu::{wgpu, Color};
 
+    use super::abstraction::Vertex;
+
     pub struct Scene {
         pipeline: wgpu::RenderPipeline,
     }
@@ -344,9 +393,18 @@ mod scene {
             })
         }
 
-        pub fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
+        pub fn draw<'a>(
+            &'a self,
+            render_pass: &mut wgpu::RenderPass<'a>,
+            vertex_buffer: &'a wgpu::Buffer,
+            index_buffer: &'a wgpu::Buffer,
+            len: usize,
+        ) {
             render_pass.set_pipeline(&self.pipeline);
-            render_pass.draw(0..3, 0..1);
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint32); // 1.
+            render_pass.draw_indexed(0..len as u32, 0, 0..1); // 2.
+                                                              // render_pass.draw(0..3, 0..1);
         }
     }
 
@@ -367,7 +425,7 @@ mod scene {
             vertex: wgpu::VertexState {
                 module: &shader_module,
                 entry_point: "vertex_main",
-                buffers: &[],
+                buffers: &[Vertex::desc()],
             },
             primitive: wgpu::PrimitiveState::default(),
             depth_stencil: None,
@@ -379,5 +437,144 @@ mod scene {
             }),
             multiview: None,
         })
+    }
+}
+
+mod abstraction {
+    use iced_wgpu::wgpu;
+
+    #[repr(C)]
+    #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+    pub struct Vertex {
+        pub position: [f32; 3],
+        pub color: [f32; 3],
+    }
+    impl Vertex {
+        pub fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
+            wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &[
+                    wgpu::VertexAttribute {
+                        offset: 0,
+                        shader_location: 0,
+                        format: wgpu::VertexFormat::Float32x3,
+                    },
+                    wgpu::VertexAttribute {
+                        offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                        shader_location: 1,
+                        format: wgpu::VertexFormat::Float32x3,
+                    },
+                ],
+            }
+        }
+    }
+}
+
+mod graphics {
+    use std::f32::consts::PI;
+
+    use super::abstraction::Vertex;
+
+    pub fn from_buffer(
+        buffer: Vec<f32>,
+        width: f32,
+        top_color: [f32; 3],
+        bottom_color: [f32; 3],
+        size: [f32; 2],
+    ) -> (Vec<Vertex>, Vec<u32>) {
+        let mut vertices: Vec<Vertex> = Vec::new();
+        let mut indices: Vec<u32> = Vec::new();
+
+        if buffer.is_empty() {
+            return (Vec::new(), Vec::new());
+        }
+
+        let width = width * 0.005;
+        let radius: f32 = 0.3;
+        let mut last_x: f32 = 0.0;
+        let mut last_y: f32 = 0.0;
+
+        for i in 0..buffer.len() - 1 {
+            let mut angle: f32 = 2.0 * PI * (i + 1) as f32 / (buffer.len() - 2) as f32;
+            let degree: f32 = 2.0 * PI / 360.0;
+            angle += degree * 270.0; // rotate circle 270°
+
+            let value: f32 = buffer[i];
+
+            let x: f32 = angle.cos() * (value + radius) / size[0];
+            let y: f32 = angle.sin() * (value + radius) / size[1];
+
+            let r: f32 = (top_color[0] * value) + (bottom_color[0] * (1.0 / value));
+            let g: f32 = (top_color[1] * value) + (bottom_color[1] * (1.0 / value));
+            let b: f32 = (top_color[2] * value) + (bottom_color[2] * (1.0 / value));
+
+            let color: [f32; 3] = [r, g, b];
+
+            if i != 0 {
+                let (mut vertices2, mut indices2) = draw_line(
+                    [last_x, last_y],
+                    [x, y],
+                    width,
+                    color,
+                    vertices.len() as u32,
+                    size,
+                );
+                vertices.append(&mut vertices2);
+                indices.append(&mut indices2);
+            }
+            last_x = x;
+            last_y = y;
+        }
+        (vertices, indices)
+    }
+
+    fn draw_line(
+        point1: [f32; 2],
+        point2: [f32; 2],
+        width: f32,
+        color: [f32; 3],
+        vertex_len: u32,
+        size: [f32; 2],
+    ) -> (Vec<Vertex>, Vec<u32>) {
+        let mut vertices: Vec<Vertex> = Vec::new();
+        let mut indices: Vec<u32> = Vec::new();
+
+        let x1: f32 = point1[0];
+        let x2: f32 = point2[0];
+        let y1: f32 = point1[1];
+        let y2: f32 = point2[1];
+
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+        let l = dx.hypot(dy);
+        let u = dx * width * 0.5 / l / size[1];
+        let v = dy * width * 0.5 / l / size[0];
+
+        vertices.push(Vertex {
+            position: [x1 + v, y1 - u, 0.0],
+            color,
+        });
+        vertices.push(Vertex {
+            position: [x1 - v, y1 + u, 0.0],
+            color,
+        });
+        vertices.push(Vertex {
+            position: [x2 - v, y2 + u, 0.0],
+            color,
+        });
+        vertices.push(Vertex {
+            position: [x2 + v, y2 - u, 0.0],
+            color,
+        });
+
+        indices.push(vertex_len + 2);
+        indices.push(vertex_len + 1);
+        indices.push(vertex_len);
+        indices.push(vertex_len + 2);
+        indices.push(vertex_len);
+        indices.push(vertex_len + 3);
+
+        (vertices, indices)
     }
 }
