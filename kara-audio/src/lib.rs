@@ -31,8 +31,9 @@ impl Default for Config {
             frequency_scale_range: [50, 1000],
             frequency_scale_amount: 1,
             density_reduction: 5,
-            max_frequency: 20_000,
-            volume: 1.0,
+            //max_frequency: 20_000,
+            max_frequency: 12_500,
+            volume: 3.0,
         }
     }
 }

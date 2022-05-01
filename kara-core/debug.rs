@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tracing::{debug, info};
+use tracing::{info, trace};
 use tracing_subscriber::{
     filter, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
 };
@@ -18,10 +18,12 @@ pub fn initialise() -> (tracing_appender::non_blocking::WorkerGuard, Interface) 
                 .with_writer(non_blocking)
                 .with_ansi(false),
         )
-        .with(tracing_subscriber::fmt::layer().pretty())
+        .with(
+            tracing_subscriber::fmt::layer(), //.pretty()
+        )
         .with(filter)
         .init();
-    debug!("starting in {} mode", args.interface().to_string());
+    trace!("starting in {} mode", args.interface().to_string());
     info!(
         "{} {} has started",
         env!("CARGO_BIN_NAME"),

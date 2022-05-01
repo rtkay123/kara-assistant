@@ -27,6 +27,7 @@ use iced_winit::{
     Clipboard, Debug, Size,
 };
 use kara_audio::Config;
+use tracing::{error, trace};
 
 use self::{controls::Controls, scene::Scene};
 
@@ -59,8 +60,8 @@ pub fn start() -> anyhow::Result<()> {
         let adapter = initialize_adapter_from_env_or_default(&instance, backend, Some(&surface))
             .await
             .expect("No suitable GPU adapters found in the system");
+        trace!("using gpu adapter: {:?}", &adapter);
         let adapter_features = adapter.features();
-
         let needed_limits = Limits::default();
         (
             surface
@@ -191,9 +192,9 @@ pub fn start() -> anyhow::Result<()> {
 
                         let (vertices, indices) = graphics::from_buffer(
                             buffer,
-                            1.0,
-                            [1.0, 0.0, 0.0],
-                            [0.0, 0.0, 0.05],
+                            1.5,
+                            [0.0, 0.01, 0.02],
+                            [0.01, 0.0, 0.05],
                             [
                                 window.inner_size().width as f32 * 0.001,
                                 window.inner_size().height as f32 * 0.001,
@@ -264,6 +265,7 @@ pub fn start() -> anyhow::Result<()> {
                     }
                     Err(error) => match error {
                         SurfaceError::OutOfMemory => {
+                            error!("Swapchain error: {}. Rendering cannot continue.", error);
                             panic!("Swapchain error: {}. Rendering cannot continue.", error)
                         }
                         _ => {
