@@ -437,7 +437,7 @@ mod scene {
         texture_format: wgpu::TextureFormat,
     ) -> wgpu::RenderPipeline {
         let shader_module =
-            device.create_shader_module(&wgpu::include_wgsl!("../kara-assets/shader.wgsl"));
+            device.create_shader_module(&wgpu::include_wgsl!("../kara-assets/wgpu/shader.wgsl"));
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: None,
             bind_group_layouts: &[],
