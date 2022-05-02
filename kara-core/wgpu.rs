@@ -34,7 +34,7 @@ use self::{controls::Controls, scene::Scene};
 
 pub async fn start() -> anyhow::Result<()> {
     let handle = Handle::current();
-    let stream = kara_audio::visualiser_stream(Config::default());
+    let stream = kara_audio::visualiser_stream(Config::default()).await;
     let title = env!("CARGO_BIN_NAME");
     let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);
     let event_loop = EventLoop::new();
