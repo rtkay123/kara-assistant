@@ -1188,6 +1188,7 @@ dependencies = [
  "apodize",
  "coqui-stt",
  "cpal",
+ "rubato",
  "rustfft",
  "tokio",
  "tracing",
@@ -1891,6 +1892,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "realfft"
+version = "3.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a83b876fe55da7e1bf5deeacb93d6411edf81eba0e1a497e79c067734729053a"
+dependencies = [
+ "rustfft",
+]
+
+[[package]]
 name = "redox_syscall"
 version = "0.2.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1930,6 +1940,18 @@ name = "renderdoc-sys"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1382d1f0a252c4bf97dc20d979a2fdd05b024acd7c2ed0f7595d7817666a157"
+
+[[package]]
+name = "rubato"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd70209c27d5b08f5528bdc779ea3ffb418954e28987f9f9775c6eac41003f9c"
+dependencies = [
+ "num-complex",
+ "num-integer",
+ "num-traits",
+ "realfft",
+]
 
 [[package]]
 name = "rustc-hash"

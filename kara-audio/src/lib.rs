@@ -73,11 +73,35 @@ pub async fn init_audio_sender(event_sender: mpsc::Sender<Event>) {
                 None => config,
             };
         }
+        let channels = config.channels();
         let stream = device
             .build_input_stream(
                 &config.into(),
                 move |data, _: &_| {
-                    send_to_visualiser(data, event_sender.clone());
+                    use rubato::{
+                        InterpolationParameters, InterpolationType, Resampler, SincFixedIn,
+                        WindowFunction,
+                    };
+                    let params = InterpolationParameters {
+                        sinc_len: 256,
+                        f_cutoff: 0.95,
+                        interpolation: InterpolationType::Linear,
+                        oversampling_factor: 256,
+                        window: WindowFunction::BlackmanHarris2,
+                    };
+                    let mut resampler = SincFixedIn::<f32>::new(
+                        44100_f64 / SAMPLE_RATE as f64,
+                        3.0,
+                        params,
+                        data.len(),
+                        channels.into(),
+                    )
+                    .unwrap();
+
+                    let waves_in = vec![data];
+                    let waves_out = resampler.process(&waves_in, None).unwrap();
+                    let s = waves_out.first().unwrap();
+                    send_to_visualiser(s, event_sender.clone());
                     tx.send(data.to_owned()).unwrap();
                 },
                 err_fn,
