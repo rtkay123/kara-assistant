@@ -10,7 +10,9 @@ async fn main() {
             println!("Hello, world!");
         }
         cli::Interface::Gui => {
-            wgpu::start().await.unwrap();
+            if let Err(e) = wgpu::start().await {
+                tracing::error!("{}", e);
+            }
         }
     }
 }

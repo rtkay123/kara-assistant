@@ -13,3 +13,4 @@ apodize = "1.0.0"
 coqui-stt = "0.3.0"
 tokio = { version = "1.18.0", features = [ "rt-multi-thread" ] }
 rubato = "0.12.0"
+iced_winit = { git = "https://github.com/iced-rs/iced" }

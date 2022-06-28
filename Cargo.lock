@@ -1188,6 +1188,7 @@ dependencies = [
  "apodize",
  "coqui-stt",
  "cpal",
+ "iced_winit",
  "rubato",
  "rustfft",
  "tokio",

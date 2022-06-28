@@ -8,6 +8,7 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     Sample,
 };
+use iced_winit::winit::event_loop::EventLoopProxy;
 use tracing::{debug, error};
 
 use self::stream::{AudioStream, Event};
@@ -46,14 +47,17 @@ impl Default for Config {
     }
 }
 
-pub async fn visualiser_stream(vis_settings: Config) -> mpsc::Sender<Event> {
+pub fn visualiser_stream(
+    vis_settings: Config,
+    stt_proxy: EventLoopProxy<String>,
+) -> mpsc::Sender<Event> {
     let audio_stream = AudioStream::init(vis_settings);
     let event_sender = audio_stream.get_event_sender();
-    init_audio_sender(event_sender.clone()).await;
+    init_audio_sender(event_sender.clone(), stt_proxy);
     event_sender
 }
 
-pub async fn init_audio_sender(event_sender: mpsc::Sender<Event>) {
+pub fn init_audio_sender(event_sender: mpsc::Sender<Event>, stt_proxy: EventLoopProxy<String>) {
     let mut stream =
         Stream::from_model(Arc::new(Model::new("kara-assets/kara-stt.tflite").unwrap())).unwrap();
     let (tx, rx) = mpsc::channel();
@@ -116,7 +120,9 @@ pub async fn init_audio_sender(event_sender: mpsc::Sender<Event>) {
             let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
             stream.feed_audio(&val);
             if let Ok(val) = stream.intermediate_decode() {
-                println!("{val}");
+                if let Err(e) = stt_proxy.send_event(val) {
+                    tracing::error!("{}", e);
+                }
             }
         }
     });

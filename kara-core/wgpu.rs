@@ -34,10 +34,12 @@ use self::{controls::Controls, scene::Scene};
 
 pub async fn start() -> anyhow::Result<()> {
     let handle = Handle::current();
-    let stream = kara_audio::visualiser_stream(Config::default()).await;
     let title = env!("CARGO_BIN_NAME");
     let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);
-    let event_loop = EventLoop::new();
+    // Create EventLoop with 'String' user events
+    let event_loop = EventLoop::with_user_event();
+    let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
+    let stream = kara_audio::visualiser_stream(Config::default(), proxy);
     let window = Window::new(&event_loop)?;
     window.set_title(&title);
     window.set_decorations(false);
@@ -100,8 +102,7 @@ pub async fn start() -> anyhow::Result<()> {
                 .expect("Task spawned in Tokio executor panicked")
         })
     })
-    .await
-    .unwrap();
+    .await?;
     surface.configure(
         &device,
         &SurfaceConfiguration {
@@ -297,6 +298,10 @@ pub async fn start() -> anyhow::Result<()> {
                     },
                 }
                 window.request_redraw()
+            }
+            // Receiving feed (speech) from the user
+            Event::UserEvent(val) => {
+                state.queue_message(controls::Message::TextChanged(val));
             }
             _ => {}
         }
