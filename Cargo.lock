@@ -1187,12 +1187,14 @@ dependencies = [
 name = "kara-audio"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "apodize",
  "coqui-stt",
  "cpal",
  "iced_winit",
  "rubato",
  "rustfft",
+ "serde",
  "tokio",
  "tracing",
 ]

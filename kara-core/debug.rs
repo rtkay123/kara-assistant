@@ -28,7 +28,6 @@ pub fn initialise() -> (tracing_appender::non_blocking::WorkerGuard, ParsedConfi
         config_path_1()
     };
     let config: ParsedConfig = ParsedConfig::from(config);
-    println!("{:#?}", &config);
     let filter =
         filter::Targets::new().with_target("kara", args.debug(config.general_settings.log_level));
     let file_appender = tracing_appender::rolling::daily(log_dir(), "kara.log");

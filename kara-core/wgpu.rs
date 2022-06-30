@@ -26,7 +26,7 @@ use iced_winit::{
     },
     Clipboard, Debug, Size,
 };
-use kara_audio::Config;
+use kara_audio::{stt_sources::stt_source, Config};
 use tokio::runtime::Handle;
 use tracing::{error, trace};
 
@@ -35,13 +35,14 @@ use crate::config::state::ParsedConfig;
 use self::{controls::Controls, scene::Scene};
 
 pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
+    let stt_source = stt_source(&config.nlu.stt.source)?;
     let handle = Handle::current();
     let title = env!("CARGO_BIN_NAME");
     let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);
     // Create EventLoop with 'String' user events
     let event_loop = EventLoop::with_user_event();
     let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
-    let stream = kara_audio::visualiser_stream(Config::default(), proxy);
+    let stream = kara_audio::visualiser_stream(Config::default(), proxy, stt_source);
     let window = Window::new(&event_loop)?;
     window.set_title(&title);
     window.set_decorations(false);

@@ -3,7 +3,7 @@ use std::{
     thread,
 };
 
-use coqui_stt::{Model, Stream};
+use coqui_stt::Stream;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     Sample,
@@ -11,9 +11,13 @@ use cpal::{
 use iced_winit::winit::event_loop::EventLoopProxy;
 use tracing::{debug, error};
 
-use self::stream::{AudioStream, Event};
+use self::{
+    stream::{AudioStream, Event},
+    stt_sources::STTSource,
+};
 
 pub mod stream;
+pub mod stt_sources;
 const SAMPLE_RATE: u32 = 16000;
 
 #[derive(Debug, Clone, Copy)]
@@ -50,16 +54,19 @@ impl Default for Config {
 pub fn visualiser_stream(
     vis_settings: Config,
     stt_proxy: EventLoopProxy<String>,
+    stt_source: STTSource,
 ) -> mpsc::Sender<Event> {
     let audio_stream = AudioStream::init(vis_settings);
     let event_sender = audio_stream.get_event_sender();
-    init_audio_sender(event_sender.clone(), stt_proxy);
+    init_audio_sender(event_sender.clone(), stt_proxy, stt_source);
     event_sender
 }
 
-pub fn init_audio_sender(event_sender: mpsc::Sender<Event>, stt_proxy: EventLoopProxy<String>) {
-    let mut stream =
-        Stream::from_model(Arc::new(Model::new("kara-assets/kara-stt.tflite").unwrap())).unwrap();
+pub fn init_audio_sender(
+    event_sender: mpsc::Sender<Event>,
+    stt_proxy: EventLoopProxy<String>,
+    stt_source: STTSource,
+) {
     let (tx, rx) = mpsc::channel();
     tokio::spawn(async move {
         let host = cpal::default_host();
@@ -116,14 +123,21 @@ pub fn init_audio_sender(event_sender: mpsc::Sender<Event>, stt_proxy: EventLoop
         thread::park();
     });
     tokio::spawn(async move {
-        while let Ok(val) = rx.recv() {
-            let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
-            stream.feed_audio(&val);
-            if let Ok(val) = stream.intermediate_decode() {
-                if let Err(e) = stt_proxy.send_event(val) {
-                    tracing::error!("{}", e);
+        match stt_source {
+            STTSource::Kara(model) => {
+                let mut stream = Stream::from_model(Arc::clone(&model)).unwrap();
+                while let Ok(val) = rx.recv() {
+                    let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
+                    stream.feed_audio(&val);
+                    if let Ok(val) = stream.intermediate_decode() {
+                        if let Err(e) = stt_proxy.send_event(val) {
+                            tracing::error!("{}", e);
+                        }
+                    }
                 }
             }
+            STTSource::Gcp => todo!(),
+            STTSource::Watson => todo!(),
         }
     });
 }

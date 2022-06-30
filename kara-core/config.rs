@@ -30,6 +30,7 @@ struct SpeechToText {
     #[serde(rename = "pause-length")]
     pause_length: Option<f32>,
     source: Option<String>,
+    #[serde(rename = "kara")]
     kara_config: Option<STTKara>,
 }
 
@@ -42,6 +43,7 @@ struct STTKara {
 }
 
 pub mod state {
+    use kara_audio::stt_sources::STTConfig;
     use serde::Deserialize;
 
     use crate::cli::{DebugMode, Interface};
@@ -53,14 +55,6 @@ pub mod state {
         Metric,
         Imperial,
     }
-
-    #[derive(Debug, Deserialize)]
-    pub enum NLUSources {
-        Kara(STTKara),
-        Gcp,
-        Watson,
-    }
-
     #[derive(Debug, Deserialize)]
     pub struct ParsedConfig {
         #[serde(rename = "general-settings")]
@@ -87,16 +81,9 @@ pub mod state {
     pub struct SpeechToText {
         #[serde(rename = "pause-length")]
         pub pause_length: f32,
-        pub source: NLUSources,
+        pub source: STTConfig,
     }
 
-    #[derive(Debug, Deserialize)]
-    pub struct STTKara {
-        #[serde(rename = "model-path")]
-        pub model_path: String,
-        #[serde(rename = "scorer-path")]
-        pub scorer_path: Option<String>,
-    }
     impl From<ConfigFile> for ParsedConfig {
         fn from(conf: ConfigFile) -> Self {
             let units = match &conf.general_settings {
@@ -171,20 +158,28 @@ pub mod state {
                                 "kara" => {
                                     let (model_path, scorer): (String, Option<String>) =
                                         match &stt.kara_config {
-                                            Some(paths) => (
-                                                paths
-                                                    .model_path
-                                                    .as_ref()
-                                                    .unwrap_or(&DEFAULT_STT_MODEL.to_owned())
-                                                    .to_owned(),
-                                                None,
-                                            ),
+                                            Some(paths) => {
+                                                let mp = paths.model_path.as_ref();
+                                                let sp = paths.scorer_path.as_ref();
+                                                let mp = match mp {
+                                                    Some(mp) => match mp.is_empty() {
+                                                        true => DEFAULT_STT_MODEL,
+                                                        false => mp,
+                                                    },
+                                                    None => DEFAULT_STT_MODEL,
+                                                };
+                                                let sp = match sp {
+                                                    Some(sp) => match sp.is_empty() {
+                                                        true => None,
+                                                        false => Some(sp),
+                                                    },
+                                                    None => None,
+                                                };
+                                                (mp.to_owned(), sp.cloned())
+                                            }
                                             None => (DEFAULT_STT_MODEL.to_owned(), None),
                                         };
-                                    NLUSources::Kara(STTKara {
-                                        model_path,
-                                        scorer_path: scorer,
-                                    })
+                                    STTConfig::Kara(model_path, scorer)
                                 }
                                 "watson" => {
                                     todo!()
