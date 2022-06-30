@@ -42,6 +42,7 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     // Create EventLoop with 'String' user events
     let event_loop = EventLoop::with_user_event();
     let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
+                                           /* TODO: Create an enum for events?*/
     let stream = kara_audio::visualiser_stream(Config::default(), proxy, stt_source);
     let window = Window::new(&event_loop)?;
     window.set_title(&title);
