@@ -8,6 +8,8 @@ use super::STTSource;
 /// Initialises a Coqui STT model with an (optional) scorer (language model).
 /// Panics if the STT model could not be initialised
 pub(crate) fn init_kara_model(model: &str, scorer: &Option<String>) -> anyhow::Result<STTSource> {
+    use gag::Gag;
+    let _print_gag = Gag::stderr().unwrap();
     let mut model = coqui_stt::Model::new(model)
         .with_context(|| format!("failed to initialise kara stt model from path: {}", model))?;
     if let Some(scorer) = scorer {

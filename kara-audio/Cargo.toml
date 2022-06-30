@@ -16,3 +16,4 @@ rubato = "0.12.0"
 iced_winit = { git = "https://github.com/iced-rs/iced" }
 serde = { version = "1.0.137", features = [ "derive" ] }
 anyhow = "1.0.57"
+gag = "1.0.0"
