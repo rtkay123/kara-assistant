@@ -17,6 +17,8 @@ anyhow = "1.0.57"
 kara-audio = { path = "./kara-audio"}
 bytemuck = { version = "1.9.1", features = [ "derive" ] }
 tokio = { version = "1.18.0", features = [ "macros", "rt-multi-thread" ] }
+serde = { version = "1.0.137", features = [ "derive" ] }
+toml = "0.5.9"
 
 [workspace]
 members = [

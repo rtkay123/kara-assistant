@@ -30,9 +30,11 @@ use kara_audio::Config;
 use tokio::runtime::Handle;
 use tracing::{error, trace};
 
+use crate::config::state::ParsedConfig;
+
 use self::{controls::Controls, scene::Scene};
 
-pub async fn start() -> anyhow::Result<()> {
+pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     let handle = Handle::current();
     let title = env!("CARGO_BIN_NAME");
     let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);

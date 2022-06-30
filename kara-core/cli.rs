@@ -1,4 +1,5 @@
 use clap::{ArgEnum, Parser};
+use serde::Deserialize;
 use tracing::Level;
 
 /// A digital assistant
@@ -11,29 +12,39 @@ pub struct Args {
     /// What interface to use
     #[clap(short, long, arg_enum)]
     interface: Option<Interface>,
+    /// Specify alternative configuration file [default: $XDG_CONFIG_HOME/kara/kara.toml]
+    #[clap(short, long)]
+    config: Option<String>,
 }
 
 impl Args {
-    pub fn debug(&self) -> Level {
+    pub fn debug(&self, config_file_level: DebugMode) -> Level {
         match self.debug {
-            Some(mode) => match mode {
-                DebugMode::Trace => Level::TRACE,
-                DebugMode::Debug => Level::DEBUG,
-                DebugMode::Info => Level::INFO,
-                DebugMode::Warn => Level::WARN,
-                DebugMode::Error => Level::ERROR,
-            },
-            None => Level::TRACE,
+            Some(mode) => Args::map_log_level(mode),
+            None => Args::map_log_level(config_file_level),
+        }
+    }
+    fn map_log_level(mode: DebugMode) -> Level {
+        match mode {
+            DebugMode::Trace => Level::TRACE,
+            DebugMode::Debug => Level::DEBUG,
+            DebugMode::Info => Level::INFO,
+            DebugMode::Warn => Level::WARN,
+            DebugMode::Error => Level::ERROR,
         }
     }
 
-    pub fn interface(&self) -> Interface {
-        self.interface.unwrap_or(Interface::Gui)
+    pub fn interface(&self, config_file_interface: Interface) -> Interface {
+        self.interface.unwrap_or(config_file_interface)
+    }
+
+    pub fn config_path(&self) -> Option<&String> {
+        self.config.as_ref()
     }
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum, Debug)]
-enum DebugMode {
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum, Debug, Deserialize)]
+pub enum DebugMode {
     Trace,
     Debug,
     Info,
@@ -41,7 +52,7 @@ enum DebugMode {
     Error,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum, Debug, Deserialize)]
 pub enum Interface {
     Cli,
     Gui,
