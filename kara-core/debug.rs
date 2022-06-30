@@ -103,8 +103,8 @@ fn config_path_2() -> ConfigFile {
 }
 
 fn config_default() -> ConfigFile {
-    let contents = std::fs::read_to_string("kara.toml").unwrap();
-    toml::from_str(&contents).expect("parsing config file")
+    let contents = include_str!("../kara.toml");
+    toml::from_str(contents).expect("parsing config file")
 }
 
 fn log_dir() -> impl AsRef<Path> {
