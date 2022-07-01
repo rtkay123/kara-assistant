@@ -1,41 +1,104 @@
-# Configuration file for Kara. The wgpu powered digital assistant.
-[general-settings]
-# Kara has two modes, a graphical session, and a terminal session.
+# Configuration file for Kara. The WGPU powered digital assistant.
+
+#[general-settings]
+# Interface mode
+# 
+# Kara has two modes: a graphical session, and a command line session.
 # You can set your preference by using "gui" or "cli" respectively.
-# The value passed as a CLI arg takes priority.
-default-mode = "gui"
+# Values for `default-mode`:
+#     - gui: Start a graphical session
+#     - cli: Start a cli session
+#default-mode = "gui"
 
-# Set the log level. Possible values are:
-# "trace", "debug", "info", "warn", "error" in increasing level of
-# importance. Kara will output the current log level as well as
-# all log levels to the right (of the list above).
-# If set to debug: debug, info, warn, and error events are emmitted.
-# If set to warn: only warn and error events are emmitted.
-# The value passed as a CLI arg takes priority.
-log-level = "warn"
+# Log Level
+#
+# Kara writes a log file at a cache directory:
+#     macOS - $HOME/Library/Caches/kara/ 
+#     Linux - $XDG_CACHE_HOME/kara/
+#     Windows - {FOLDERID_LocalAppData}/kara/
+#
+# Values for `log-level`:
+#     - trace: Most verbose level. Outputs all log events.
+#     - debug: Outputs [debug, info, warn, error] events.
+#     - info: Outputs [info, warn, error] events.
+#     - warn: Outputs [warn, error] events.
+#     - error: Outputs [error] events.
+#
+# NOTE: This setting can also be configured via a cli argument. The value
+#       passed there will take priority
+#log-level = "warn"
 
-# The default specification for units Kara should assume
-units = "metric" 
+# Units
+#
+# The default measurement system Kara should assume
+# Values for `units`:
+#     - metric: Representing the metric system.
+#     - imperial: Representing the metric system.
+#units = "metric" 
 
-[natural-language-understanding]
+#[window]
+# Background opacity 
+#
+# Window opacity as a floating point number in the range
+# 0.0 <= val <= 1.0. Where 0.0 is completely transparent and
+# 1.0 is fully opaque
+#opacity = 1.0
 
-[natural-language-understanding.speech-to-text]
-# Number of seconds for Kara to listen for silence before processing
-# a command.
-pause-length = 2.0
+# Decorations
+#
+# Sets whether Kara's window should have borders and the title bar
+#
+# Values for `decorations`:
+#     - true: Enable borders and title bar
+#     - false: Disable borders and title bar
+#decorations = false
 
-# Source for Speech to Text
-# Available values are "kara", "gcp", "aws", "azure", "watson"
+# Window title
+#
+# Sets the window title
+#title = "Kara"
+
+#[natural-language-understanding]
+
+#[natural-language-understanding.speech-to-text]
+# Pause length
+#
+# Number of seconds (floating point) for Kara to listen for silence before 
+# processing a command.
+#pause-length = 1.5
+
+# Source
+#
+# A transcription source. Kara will use this source as the speech to text 
+# engine.
+#
+# Values for `source`:
+#     - kara: Kara will try to decode your speech herself
+#     - gcp: GCP
+#     - aws: AWS
+#     - azure: Azure
+#     - watson: IBM Watson
+# NOTE: All external sources require an internet connection
 # "kara" is a fallback source if there is an issue with a configured service
-source = "kara"
+#source = "kara"
 
-[natural-language-understanding.speech-to-text.kara]
-# Your .tflite model file. (https://stt.readthedocs.io/en/latest/)
-model-path = ""
+#[natural-language-understanding.speech-to-text.kara]
+# Model path
+#
+# The .tflite model file to use for transcription:
+#     Paths must be absolute (starting with /) or relative to the user's home 
+#     directory.
+#
+# You may want to take a look at (https://stt.readthedocs.io/en/latest/)
+#model-path = ""
 
-# Whether to use an external language scorer. If specified, transcription
+# Scorer path
+# Whether to use an external scorer (language model). If set, transcription
 # results may be improved.
-scorer-path = ""
+#     Paths must be absolute (starting with /) or relative to the user's home 
+#     directory.
+#scorer-path = ""
 
 #[natural-language-understanding.speech-to-text.watson]
-# call external program (gpg or pass?) so as to not store plain text config in file?
+# call external program (gpg or pass?) so as to not store plain text config in
+# file?
