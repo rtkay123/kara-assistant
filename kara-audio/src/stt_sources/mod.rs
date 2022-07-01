@@ -15,6 +15,12 @@ pub enum STTConfig {
     Watson,
 }
 
+impl STTConfig {
+    pub fn base(path: &str) -> Self {
+        STTConfig::Kara(path.to_owned(), None)
+    }
+}
+
 // Store coqui on all variants as fallback?
 #[derive(Clone)]
 pub enum STTSource {

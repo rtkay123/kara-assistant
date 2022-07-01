@@ -36,8 +36,6 @@ use self::{controls::Controls, scene::Scene};
 pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     let stt_source = stt_source(&config.nlu.stt.source)?;
     let handle = Handle::current();
-    let title = env!("CARGO_BIN_NAME");
-    let title = format!("{}{}", &title[0..1].to_uppercase(), &title[1..]);
     // Create EventLoop with 'String' user events
     let event_loop = EventLoop::with_user_event();
     let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
@@ -46,8 +44,8 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     let window = iced_winit::winit::window::WindowBuilder::new()
         .with_transparent(true)
         .build(&event_loop)?;
-    window.set_title(&title);
-    window.set_decorations(false);
+    window.set_title(&config.window.title);
+    window.set_decorations(config.window.decorations);
     let physical_size = window.inner_size();
     let mut viewport = Viewport::with_physical_size(
         iced_winit::Size {
@@ -127,7 +125,7 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
 
     // Initialise scene
     let scene = Scene::new(&device, format);
-    let controls = Controls::new();
+    let controls = Controls::new(config.window.opacity);
 
     // Initialise iced
     let mut debug = Debug::new();
@@ -332,13 +330,13 @@ mod controls {
     }
 
     impl Controls {
-        pub fn new() -> Self {
+        pub fn new(opacity: f32) -> Self {
             Self {
                 background_color: Color {
                     r: 0.0,
                     g: 0.0,
                     b: 0.0,
-                    a: 1.0,
+                    a: opacity,
                 },
                 text: String::from("Hey there"),
             }

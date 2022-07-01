@@ -8,6 +8,14 @@ pub struct ConfigFile {
     general_settings: Option<GeneralSettings>,
     #[serde(rename = "natural-language-understanding")]
     nlu: Option<Nlu>,
+    window: Option<Window>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Window {
+    opacity: Option<f32>,
+    decorations: Option<bool>,
+    title: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,6 +69,31 @@ pub mod state {
         pub general_settings: GeneralSettings,
         #[serde(rename = "natural-language-understanding")]
         pub nlu: Nlu,
+        pub window: Window,
+    }
+
+    #[derive(Debug, Deserialize)]
+    pub struct Window {
+        pub opacity: f32,
+        pub decorations: bool,
+        pub title: String,
+    }
+
+    impl Default for Window {
+        fn default() -> Self {
+            Self {
+                opacity: 1.0,
+                decorations: Default::default(),
+                title: Window::get_app_name(),
+            }
+        }
+    }
+
+    impl Window {
+        fn get_app_name() -> String {
+            let title = env!("CARGO_BIN_NAME");
+            format!("{}{}", &title[0..1].to_uppercase(), &title[1..])
+        }
     }
 
     #[derive(Debug, Deserialize)]
@@ -82,6 +115,15 @@ pub mod state {
         #[serde(rename = "pause-length")]
         pub pause_length: f32,
         pub source: STTConfig,
+    }
+
+    impl Default for SpeechToText {
+        fn default() -> Self {
+            Self {
+                pause_length: 1.5,
+                source: STTConfig::base(DEFAULT_STT_MODEL),
+            }
+        }
     }
 
     impl From<ConfigFile> for ParsedConfig {
@@ -188,13 +230,31 @@ pub mod state {
                                     todo!()
                                 }
                             },
-                            None => todo!(),
+                            None => STTConfig::Kara(DEFAULT_STT_MODEL.to_owned(), None),
                         };
                         (pause_length, source)
                     }
-                    None => todo!(),
+                    None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned(), None)),
                 },
-                None => todo!(),
+                None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned(), None)),
+            };
+            let window = match &conf.window {
+                Some(win) => {
+                    let title = win
+                        .title
+                        .as_ref()
+                        .to_owned()
+                        .cloned()
+                        .unwrap_or_else(Window::get_app_name);
+                    let decorations = win.decorations.unwrap_or_default();
+                    let opacity = win.opacity.unwrap_or(1.0);
+                    Window {
+                        title,
+                        decorations,
+                        opacity,
+                    }
+                }
+                None => Window::default(),
             };
             Self {
                 general_settings: GeneralSettings {
@@ -208,6 +268,7 @@ pub mod state {
                         source: nlu.1,
                     },
                 },
+                window,
             }
         }
     }

@@ -1,7 +1,7 @@
 mod cli;
 mod config;
 mod debug;
-mod wgpu;
+mod gui;
 
 #[tokio::main]
 async fn main() {
@@ -12,7 +12,7 @@ async fn main() {
             println!("Hello, world!");
         }
         cli::Interface::Gui => {
-            if let Err(e) = wgpu::start(&config).await {
+            if let Err(e) = gui::start(&config).await {
                 tracing::error!("{}", e);
             }
         }
