@@ -22,7 +22,6 @@ use iced_winit::{
         dpi::PhysicalPosition,
         event::{Event, ModifiersState, WindowEvent},
         event_loop::{ControlFlow, EventLoop},
-        window::Window,
     },
     Clipboard, Debug, Size,
 };
@@ -44,7 +43,9 @@ pub async fn start(config: &ParsedConfig) -> anyhow::Result<()> {
     let proxy = event_loop.create_proxy(); // Sends the user events which we can retrieve in the loop
                                            /* TODO: Create an enum for events?*/
     let stream = kara_audio::visualiser_stream(Config::default(), proxy, stt_source);
-    let window = Window::new(&event_loop)?;
+    let window = iced_winit::winit::window::WindowBuilder::new()
+        .with_transparent(true)
+        .build(&event_loop)?;
     window.set_title(&title);
     window.set_decorations(false);
     let physical_size = window.inner_size();
