@@ -1,0 +1,91 @@
+[config]
+default_to_workspace = false
+
+[config.modify_core_tasks]
+private = true
+namespace = "core"
+
+[env]
+RUST_BACKTRACE = 0
+
+LIB_DIR = "kara-lib"
+RESOURCE_DIR = "kara-assets/stt"
+
+# -- Development profile is the default
+
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/debug"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = ""
+# Directory where the binary should be placed (except for dist task, same as TARGET_DIR)
+OUT_DIR = "${TARGET_DIR}"
+
+[env.release]
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/release"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = "--release"
+OUT_DIR = "${TARGET_DIR}"
+
+[env.dist]
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/release"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = "--release"
+OUT_DIR = "./dist"
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.build]
+dependencies = ["clean", "core::build", "copy-libs", "copy-resources", "move-bin"]
+
+[tasks.run]
+dependencies = ["build", "cargo-run"]
+
+[tasks.copy-libs]
+private = true
+script_runner = "@duckscript"
+script = '''
+files = glob_array ${LIB_DIR}/*
+for file in ${files}
+    file_name = basename ${file}
+    cp ${file} ${OUT_DIR}/${file_name}
+end
+'''
+
+[tasks.copy-resources]
+private = true
+condition = { profiles = ["release"] }
+script_runner = "@duckscript"
+script = '''
+glob_cp ${RESOURCE_DIR}/**/* ${OUT_DIR}
+'''
+
+[tasks.move-bin]
+windows_alias = "move-exe"
+alias = "move-binary"
+
+[tasks.move-exe]
+private = true
+condition = { profiles = ["dist"] }
+script_runner = "@duckscript"
+script = '''
+glob_cp ${TARGET_DIR}/*.exe ${OUT_DIR}
+'''
+[tasks.move-binary]
+private = true
+condition = { profiles = ["dist"] }
+script_runner = "@shell"
+script = '''
+#!/usr/bin/env bash
+
+exeFiles=()
+for f in "$src_dir"/*; do [[ -x $f && -f $f ]] && exeFiles+=( "$f" ); done
+cp -r ${TARGET_DIR}/${exeFiles[@]} $OUT_DIR/
+'''
+
+[tasks.cargo-run]
+private = true
+command = "cargo"
+args = [
+  "run",
+  "@@remove-empty(CARGO_MAKE_CARGO_VERBOSE_FLAGS)",
+  "@@split(CARGO_MAKE_CARGO_BUILD_TEST_FLAGS, )",
+  "${@}"
+]
