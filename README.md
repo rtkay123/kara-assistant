@@ -10,3 +10,19 @@
 <div style="display: flex;align-items: center;justify-content: center;">
 <img src="./kara-assets/kara.png" width="836" />
 </div>
+
+# Dependencies
+
+1. curl
+2. [`cargo-make`](https://github.com/sagiegurari/cargo-make)
+
+# Setting up
+
+1. Clone the repository:
+
+   `git clone https://github.com/kawaki-san/kara-assistant`
+
+2. Build the project with
+   [`cargo-make`](https://github.com/sagiegurari/cargo-make):
+
+   `cargo make build`
