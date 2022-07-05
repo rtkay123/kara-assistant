@@ -3,7 +3,6 @@ use std::{
     thread,
 };
 
-use coqui_stt::Stream;
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     Sample,
@@ -18,7 +17,7 @@ use self::{
 
 pub mod stream;
 pub mod stt_sources;
-const SAMPLE_RATE: u32 = 16000;
+pub const SAMPLE_RATE: u32 = 16000;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Config {
@@ -125,14 +124,14 @@ pub fn init_audio_sender(
     tokio::spawn(async move {
         match stt_source {
             STTSource::Kara(model) => {
-                let mut stream = Stream::from_model(Arc::clone(&model)).unwrap();
+                let stream = Arc::clone(&model);
+                let mut stream = stream.lock().unwrap();
                 while let Ok(val) = rx.recv() {
                     let val = val.iter().map(|f| f.to_i16()).collect::<Vec<_>>();
-                    stream.feed_audio(&val);
-                    if let Ok(val) = stream.intermediate_decode() {
-                        if let Err(e) = stt_proxy.send_event(val) {
-                            tracing::error!("{}", e);
-                        }
+                    stream.accept_waveform(&val);
+                    if let Err(e) = stt_proxy.send_event(stream.partial_result().partial.to_owned())
+                    {
+                        tracing::error!("{}", e);
                     }
                 }
             }

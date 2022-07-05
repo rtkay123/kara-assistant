@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use serde::Deserialize;
 
@@ -10,21 +10,21 @@ pub mod kara;
 /// provide STT
 #[derive(Debug, Deserialize)]
 pub enum STTConfig {
-    Kara(String, Option<String>),
+    Kara(String),
     Gcp,
     Watson,
 }
 
 impl STTConfig {
     pub fn base(path: &str) -> Self {
-        STTConfig::Kara(path.to_owned(), None)
+        STTConfig::Kara(path.to_owned())
     }
 }
 
 // Store coqui on all variants as fallback?
 #[derive(Clone)]
 pub enum STTSource {
-    Kara(Arc<coqui_stt::Model>),
+    Kara(Arc<Mutex<vosk::Recognizer>>),
     Gcp,
     Watson,
 }
@@ -32,7 +32,7 @@ pub enum STTSource {
 #[tracing::instrument]
 pub fn stt_source(source: &STTConfig) -> anyhow::Result<STTSource> {
     match source {
-        STTConfig::Kara(model, scorer) => init_kara_model(model, scorer),
+        STTConfig::Kara(model) => init_kara_model(model),
         STTConfig::Gcp => todo!(),
         STTConfig::Watson => todo!(),
     }
