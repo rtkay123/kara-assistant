@@ -92,13 +92,6 @@
 # You may want to take a look at (https://stt.readthedocs.io/en/latest/)
 #model-path = ""
 
-# Scorer path
-# Whether to use an external scorer (language model). If set, transcription
-# results may be improved.
-#     Paths must be absolute (starting with /) or relative to the user's home 
-#     directory.
-#scorer-path = ""
-
 #[natural-language-understanding.speech-to-text.watson]
 # call external program (gpg or pass?) so as to not store plain text config in
 # file?

@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-pub const DEFAULT_STT_MODEL: &str = "kara-assets/kara-stt.tflite";
+pub const DEFAULT_STT_MODEL: &str = "kara-assets/stt";
 
 #[derive(Debug, Deserialize)]
 pub struct ConfigFile {
@@ -46,8 +46,6 @@ struct SpeechToText {
 struct STTKara {
     #[serde(rename = "model-path")]
     model_path: Option<String>,
-    #[serde(rename = "scorer-path")]
-    scorer_path: Option<String>,
 }
 
 pub mod state {
@@ -198,30 +196,21 @@ pub mod state {
                         let source = match &stt.source {
                             Some(source) => match source.trim().to_lowercase().as_str() {
                                 "kara" => {
-                                    let (model_path, scorer): (String, Option<String>) =
-                                        match &stt.kara_config {
-                                            Some(paths) => {
-                                                let mp = paths.model_path.as_ref();
-                                                let sp = paths.scorer_path.as_ref();
-                                                let mp = match mp {
-                                                    Some(mp) => match mp.is_empty() {
-                                                        true => DEFAULT_STT_MODEL,
-                                                        false => mp,
-                                                    },
-                                                    None => DEFAULT_STT_MODEL,
-                                                };
-                                                let sp = match sp {
-                                                    Some(sp) => match sp.is_empty() {
-                                                        true => None,
-                                                        false => Some(sp),
-                                                    },
-                                                    None => None,
-                                                };
-                                                (mp.to_owned(), sp.cloned())
-                                            }
-                                            None => (DEFAULT_STT_MODEL.to_owned(), None),
-                                        };
-                                    STTConfig::Kara(model_path, scorer)
+                                    let model_path: String = match &stt.kara_config {
+                                        Some(paths) => {
+                                            let mp = paths.model_path.as_ref();
+                                            let mp = match mp {
+                                                Some(mp) => match mp.is_empty() {
+                                                    true => DEFAULT_STT_MODEL,
+                                                    false => mp,
+                                                },
+                                                None => DEFAULT_STT_MODEL,
+                                            };
+                                            mp.to_owned()
+                                        }
+                                        None => DEFAULT_STT_MODEL.to_owned(),
+                                    };
+                                    STTConfig::Kara(model_path)
                                 }
                                 "watson" => {
                                     todo!()
@@ -230,13 +219,13 @@ pub mod state {
                                     todo!()
                                 }
                             },
-                            None => STTConfig::Kara(DEFAULT_STT_MODEL.to_owned(), None),
+                            None => STTConfig::Kara(DEFAULT_STT_MODEL.to_owned()),
                         };
                         (pause_length, source)
                     }
-                    None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned(), None)),
+                    None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned())),
                 },
-                None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned(), None)),
+                None => (1.5, STTConfig::Kara(DEFAULT_STT_MODEL.to_owned())),
             };
             let window = match &conf.window {
                 Some(win) => {

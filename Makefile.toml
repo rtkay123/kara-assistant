@@ -1,0 +1,137 @@
+[config]
+default_to_workspace = false
+
+[config.modify_core_tasks]
+private = true
+namespace = "core"
+
+[env]
+RUST_BACKTRACE = 0
+
+LIB_DIR = "kara-lib"
+LIB_DL_FILE = "kara-lib.zip"
+RESOURCE_DIR = "kara-assets/stt"
+
+# -- Development profile is the default
+
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/debug"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = ""
+# Directory where the binary should be placed (except for dist task, same as TARGET_DIR)
+OUT_DIR = "${TARGET_DIR}"
+
+[env.release]
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/release"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = "--release"
+OUT_DIR = "${TARGET_DIR}"
+
+[env.dist]
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/release"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = "--release"
+OUT_DIR = "./dist"
+
+[tasks.check-libs]
+private = true
+script_runner = "@duckscript"
+script = '''
+file1 = is_path_exists ./kara-lib/libvosk.so
+file2 = is_path_exists ./kara-lib/vosk_api.h
+if ${file1} and ${file2}
+  # echo "Located libraries..."
+else
+  target_os = get_env CARGO_MAKE_RUST_TARGET_OS
+  target_arch = get_env CARGO_MAKE_RUST_TARGET_ARCH
+  echo "Downloading libraries for your platform, please wait..."
+  if equals ${target_os} "linux"
+    if equals ${target_arch} "x86_64"
+      exec curl -LC - https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-linux-x86_64-0.3.42.zip -o ${LIB_DL_FILE}
+    elseif equals ${target_arch} "x86"
+      exec curl -LC - https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-linux-x86-0.3.42.zip -o ${LIB_DL_FILE}
+    elseif equals ${target_arch} "aarch64"
+      exec curl -LC - https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-linux-aarch64-0.3.42.zip -o ${LIB_DL_FILE}
+    elseif equals ${target_arch} "arm"
+      exec curl -LC - https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-linux-armv7l-0.3.42.zip -o ${LIB_DL_FILE}
+    else
+      echo "unsupported architecture"
+      assert_error
+    end
+  elseif equals ${target_os} "macos"
+    exec curl -LC - https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-osx-0.3.42.zip -o ${LIB_DL_FILE}
+  elseif equals ${target_os} "windows"
+    if equals ${target_arch} "win32"
+      exec curl -LC - https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-win32-0.3.42.zip -o ${LIB_DL_FILE}
+    elseif equals ${target_arch} "win64"
+      exec curl -LC - https://github.com/alphacep/vosk-api/releases/download/v0.3.42/vosk-win64-0.3.42.zip -o ${LIB_DL_FILE}
+    else
+      echo "unsupported architecture"
+      assert_error
+    end
+  end
+  exec mkdir -p ${LIB_DIR}
+  echo "Extracting libraries"
+  exec bsdtar -xzf kara-lib.zip -C ${LIB_DIR} --strip-components=1
+  echo "Tidying up..."
+  exec rm -rf kara-lib.zip
+  end
+end
+'''
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.build]
+dependencies = ["check-libs", "core::build", "copy-libs", "copy-resources", "move-bin"]
+
+[tasks.run]
+dependencies = ["build", "cargo-run"]
+
+[tasks.copy-libs]
+private = true
+script_runner = "@duckscript"
+script = '''
+files = glob_array ${LIB_DIR}/*
+for file in ${files}
+    file_name = basename ${file}
+    cp ${file} ${OUT_DIR}/${file_name}
+end
+'''
+
+[tasks.copy-resources]
+private = true
+condition = { profiles = ["release"] }
+script_runner = "@duckscript"
+script = '''
+glob_cp ${RESOURCE_DIR}/**/* ${OUT_DIR}
+'''
+
+[tasks.move-bin]
+windows_alias = "move-exe"
+alias = "move-binary"
+
+[tasks.move-exe]
+private = true
+condition = { profiles = ["dist"] }
+script_runner = "@duckscript"
+script = '''
+glob_cp ${TARGET_DIR}/*.exe ${OUT_DIR}
+'''
+[tasks.move-binary]
+private = true
+condition = { profiles = ["dist"] }
+script_runner = "@shell"
+script = '''
+#!/usr/bin/env bash
+
+exeFiles=()
+for f in "$src_dir"/*; do [[ -x $f && -f $f ]] && exeFiles+=( "$f" ); done
+cp -r ${TARGET_DIR}/${exeFiles[@]} $OUT_DIR/
+'''
+
+[tasks.cargo-run]
+private = true
+command = "cargo"
+args = [
+  "run",
+  "@@remove-empty(CARGO_MAKE_CARGO_VERBOSE_FLAGS)",
+  "@@split(CARGO_MAKE_CARGO_BUILD_TEST_FLAGS, )",
+  "${@}"
+]
