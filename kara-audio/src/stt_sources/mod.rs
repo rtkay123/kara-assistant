@@ -32,7 +32,7 @@ pub enum STTSource {
 #[tracing::instrument]
 pub async fn stt_source(source: &STTConfig) -> anyhow::Result<STTSource> {
     match source {
-        STTConfig::Kara(model) => init_kara_model(model).await,
+        STTConfig::Kara(model) => init_kara_model(model).await.map_err(anyhow::Error::msg),
         STTConfig::Gcp => todo!(),
         STTConfig::Watson => todo!(),
     }
