@@ -6,3 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+mic-rec = { version = "0.1.0", path = "../mic-rec" }
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["local-time", "env-filter"] }

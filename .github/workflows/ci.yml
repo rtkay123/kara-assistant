@@ -12,6 +12,7 @@ on:
 env:
   CARGO_INCREMENTAL: 0
   CARGO_TERM_COLOR: always
+  NATIVE_DEPS: libasound2-dev
 
 jobs:
   lints:
@@ -52,6 +53,9 @@ jobs:
 
       - name: Compile Tests
         run: cargo test --no-run
+
+      - name: Install apt packages
+        run: 'sudo apt install ${{ env.NATIVE_DEPS }}'
 
       - name: Test
         run: cargo test
