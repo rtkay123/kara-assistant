@@ -30,6 +30,9 @@ jobs:
       - name: Run rustfmt
         run: cargo fmt --all -- --check
 
+      - name: Install apt packages
+        run: 'sudo apt install ${{ env.NATIVE_DEPS }}'
+
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --all-features
 
