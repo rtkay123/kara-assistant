@@ -1,6 +1,8 @@
 mod audio_utils;
 pub mod errors;
 
+pub use audio_utils::{convert_to_mono, split_channels};
+
 use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     SampleFormat,
