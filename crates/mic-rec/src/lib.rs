@@ -78,6 +78,8 @@ impl StreamOpts {
                 error_callback,
             ),
         }?;
+
+        trace!("stream created");
         Ok((
             StreamOpts {
                 sample_rate: sample_rate as f32,
@@ -97,6 +99,7 @@ impl StreamOpts {
 }
 impl Stream {
     pub fn start_stream(&self) -> Result<()> {
+        trace!("starting audio stream");
         Ok(self.stream.play()?)
     }
 }
