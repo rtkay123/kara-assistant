@@ -1,5 +1,7 @@
 mod controls;
 mod scene;
+mod vertex;
+mod vis;
 
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
@@ -23,7 +25,7 @@ pub async fn run() -> anyhow::Result<()> {
     _stream.start_stream()?;
     std::thread::spawn(move || {
         while let Ok(feed) = stream_opts.feed_receiver().recv() {
-            trace!("{}", feed.len());
+            let mapped = vis::fft(&feed[0..1024]);
         }
     });
 
