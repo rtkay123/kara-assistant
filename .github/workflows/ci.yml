@@ -54,11 +54,11 @@ jobs:
         with:
           toolchain: '${{ matrix.toolchain }}'
 
-      - name: Compile Tests
-        run: cargo test --no-run
-
       - name: Install apt packages
         run: 'sudo apt install ${{ env.NATIVE_DEPS }}'
+
+      - name: Compile Tests
+        run: cargo test --no-run
 
       - name: Test
         run: cargo test
