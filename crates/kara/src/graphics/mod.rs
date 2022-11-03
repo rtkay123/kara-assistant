@@ -1,7 +1,6 @@
 mod controls;
 mod scene;
 mod vertex;
-mod vis;
 
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
@@ -24,8 +23,9 @@ pub async fn run() -> anyhow::Result<()> {
 
     _stream.start_stream()?;
     std::thread::spawn(move || {
-        while let Ok(feed) = stream_opts.feed_receiver().recv() {
-            let mapped = vis::fft(&feed[0..1024]);
+        while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
+            let _transciption_data =
+                audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
         }
     });
 

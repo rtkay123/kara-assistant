@@ -1,4 +1,5 @@
 use dasp::{sample::ToSample, Sample};
+use rustfft::{num_complex::Complex, FftPlanner};
 
 pub fn convert_to_mono(input_data: &[i16], channels: u16) -> Vec<i16> {
     if channels != 1 {
@@ -14,12 +15,20 @@ pub fn convert_to_mono(input_data: &[i16], channels: u16) -> Vec<i16> {
     }
 }
 
-pub fn resample<T: std::fmt::Debug + Sample + ToSample<i16>>(
+pub fn resample_i16<T: std::fmt::Debug + Sample + ToSample<i16>>(data: &[T]) -> Vec<i16> {
+    data.iter().map(|v| v.to_sample()).collect()
+}
+
+pub fn resample_i16_mono<T: std::fmt::Debug + Sample + ToSample<i16>>(
     data: &[T],
     channels: u16,
 ) -> Vec<i16> {
     let data: Vec<i16> = data.iter().map(|v| v.to_sample()).collect();
     convert_to_mono(&data, channels)
+}
+
+pub fn resample_f32<T: std::fmt::Debug + Sample + ToSample<f32>>(data: &[T]) -> Vec<f32> {
+    data.iter().map(|v| v.to_sample()).collect()
 }
 
 pub fn split_channels<T: Copy>(buf: &[T], channels: u16) -> Vec<Vec<T>> {
@@ -31,5 +40,15 @@ pub fn split_channels<T: Copy>(buf: &[T], channels: u16) -> Vec<Vec<T>> {
         }
     }
 
+    buffer
+}
+
+pub fn fft(buf: &[f32]) -> Vec<Complex<f32>> {
+    let mut planner = FftPlanner::<f32>::new();
+    let fft = planner.plan_fft_forward(buf.len());
+
+    let mut buffer: Vec<_> = buf.iter().map(|f| Complex { re: *f, im: 0.0 }).collect();
+
+    fft.process(&mut buffer);
     buffer
 }

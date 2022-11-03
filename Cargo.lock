@@ -113,6 +113,7 @@ name = "audio-utils"
 version = "0.1.0"
 dependencies = [
  "dasp",
+ "rustfft",
 ]
 
 [[package]]
@@ -1317,6 +1318,7 @@ name = "kara"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "audio-utils",
  "bytemuck",
  "iced_wgpu",
  "iced_winit",

@@ -12,7 +12,8 @@ use crate::errors::StreamOptsError;
 
 pub struct StreamOpts {
     sample_rate: f32,
-    audio_receiver: crossbeam_channel::Receiver<Vec<i16>>,
+    audio_feed: crossbeam_channel::Receiver<Vec<f32>>,
+    channel_count: u16,
 }
 
 pub struct Stream {
@@ -23,7 +24,7 @@ type Result<T> = std::result::Result<T, StreamOptsError>;
 
 impl StreamOpts {
     pub fn new(device_name: Option<impl AsRef<str>>) -> Result<(Self, Stream)> {
-        let (audio_sender, audio_receiver) = crossbeam_channel::unbounded();
+        let (raw_sender, raw_receiver) = crossbeam_channel::unbounded();
         trace!("setting up audio device");
         let host = cpal::default_host();
 
@@ -54,7 +55,7 @@ impl StreamOpts {
             SampleFormat::I16 => device.build_input_stream(
                 &config.into(),
                 move |data: &[i16], _| {
-                    if let Err(e) = audio_sender.send(audio_utils::resample(data, channels)) {
+                    if let Err(e) = raw_sender.send(audio_utils::resample_f32(data)) {
                         error!("{e}")
                     }
                 },
@@ -63,7 +64,7 @@ impl StreamOpts {
             SampleFormat::U16 => device.build_input_stream(
                 &config.into(),
                 move |data: &[u16], _| {
-                    if let Err(e) = audio_sender.send(audio_utils::resample(data, channels)) {
+                    if let Err(e) = raw_sender.send(audio_utils::resample_f32(data)) {
                         error!("{e}")
                     }
                 },
@@ -72,7 +73,7 @@ impl StreamOpts {
             SampleFormat::F32 => device.build_input_stream(
                 &config.into(),
                 move |data: &[f32], _| {
-                    if let Err(e) = audio_sender.send(audio_utils::resample(data, channels)) {
+                    if let Err(e) = raw_sender.send(data.to_owned()) {
                         error!("{e}")
                     }
                 },
@@ -84,7 +85,8 @@ impl StreamOpts {
         Ok((
             StreamOpts {
                 sample_rate: sample_rate as f32,
-                audio_receiver,
+                audio_feed: raw_receiver,
+                channel_count: channels,
             },
             Stream { stream },
         ))
@@ -94,8 +96,11 @@ impl StreamOpts {
         self.sample_rate
     }
 
-    pub fn feed_receiver(&self) -> &crossbeam_channel::Receiver<Vec<i16>> {
-        &self.audio_receiver
+    pub fn audio_feed(&self) -> &crossbeam_channel::Receiver<Vec<f32>> {
+        &self.audio_feed
+    }
+    pub fn channel_count(&self) -> u16 {
+        self.channel_count
     }
 }
 impl Stream {

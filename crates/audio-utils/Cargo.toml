@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 dasp = "0.11.0"
+rustfft = "6.0.1"
