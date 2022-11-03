@@ -109,6 +109,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "audio-utils"
+version = "0.1.0"
+dependencies = [
+ "dasp",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1453,9 +1460,9 @@ dependencies = [
 name = "mic-rec"
 version = "0.1.0"
 dependencies = [
+ "audio-utils",
  "cpal",
  "crossbeam-channel",
- "dasp",
  "thiserror",
  "tracing",
 ]
