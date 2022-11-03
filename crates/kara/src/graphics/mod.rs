@@ -2,6 +2,7 @@ mod controls;
 mod scene;
 mod vertex;
 
+use audio_utils::fft::spectrum;
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
     conversion, futures, program, renderer,
@@ -26,6 +27,9 @@ pub async fn run() -> anyhow::Result<()> {
         while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
             let _transciption_data =
                 audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
+
+            // A vec containing a tuple of frequencies (0) respective amplitude(1)
+            let _data: Vec<_> = spectrum(&audio_buf, stream_opts.sample_rate() as u16);
         }
     });
 

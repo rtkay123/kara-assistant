@@ -1,5 +1,7 @@
+pub mod fft;
+pub mod window;
+
 use dasp::{sample::ToSample, Sample};
-use rustfft::{num_complex::Complex, FftPlanner};
 
 pub fn convert_to_mono(input_data: &[i16], channels: u16) -> Vec<i16> {
     if channels != 1 {
@@ -40,15 +42,5 @@ pub fn split_channels<T: Copy>(buf: &[T], channels: u16) -> Vec<Vec<T>> {
         }
     }
 
-    buffer
-}
-
-pub fn fft(buf: &[f32]) -> Vec<Complex<f32>> {
-    let mut planner = FftPlanner::<f32>::new();
-    let fft = planner.plan_fft_forward(buf.len());
-
-    let mut buffer: Vec<_> = buf.iter().map(|f| Complex { re: *f, im: 0.0 }).collect();
-
-    fft.process(&mut buffer);
     buffer
 }
