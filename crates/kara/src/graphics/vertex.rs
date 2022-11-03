@@ -22,18 +22,23 @@ impl Vertex {
     }
 }
 
-// lib.rs
 pub(crate) const VERTICES: &[Vertex] = &[
     Vertex {
-        position: [0.0, 0.5, 0.0],
+        position: [0.5, 0.5, 0.0],
         colour: [1.0, 0.0, 0.0],
     },
     Vertex {
-        position: [-0.5, -0.5, 0.0],
+        position: [-0.5, 0.5, 0.0],
         colour: [0.0, 1.0, 0.0],
     },
     Vertex {
-        position: [0.5, -0.5, 0.0],
+        position: [-0.5, -0.5, 0.0],
         colour: [0.0, 0.0, 1.0],
     },
+    Vertex {
+        position: [0.5, -0.5, 0.0],
+        colour: [0.0, 1.0, 0.0],
+    },
 ];
+
+pub(crate) const INDICES: &[u16] = &[0, 1, 2, 0, 2, 3];

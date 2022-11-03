@@ -1,11 +1,12 @@
 use iced_wgpu::wgpu;
 use iced_winit::Color;
 
-use super::vertex::{Vertex, VERTICES};
+use super::vertex::{Vertex, INDICES, VERTICES};
 
 pub struct Scene {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
+    index_buffer: wgpu::Buffer,
 }
 
 impl Scene {
@@ -19,10 +20,19 @@ impl Scene {
                 usage: wgpu::BufferUsages::VERTEX,
             },
         );
+        let index_buffer = wgpu::util::DeviceExt::create_buffer_init(
+            device,
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(INDICES),
+                usage: wgpu::BufferUsages::INDEX,
+            },
+        );
 
         Scene {
             pipeline,
             vertex_buffer,
+            index_buffer,
         }
     }
 
@@ -58,7 +68,8 @@ impl Scene {
     pub fn draw<'a>(&'a self, render_pass: &mut wgpu::RenderPass<'a>) {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        render_pass.draw(0..VERTICES.len() as u32, 0..1);
+        render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+        render_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..1);
     }
 }
 
