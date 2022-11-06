@@ -2,6 +2,8 @@ mod controls;
 mod scene;
 mod vertex;
 
+use std::time::Duration;
+
 use audio_utils::fft::spectrum;
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
@@ -10,7 +12,7 @@ use iced_winit::{
         dpi::PhysicalPosition,
         event::*,
         event_loop::{ControlFlow, EventLoop},
-        window::WindowBuilder,
+        window::{Window, WindowBuilder},
     },
     Clipboard, Debug, Size,
 };
@@ -35,6 +37,8 @@ pub async fn run() -> anyhow::Result<()> {
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop)?;
+
+    let refresh_rate_millis = (1.0 / monitor_refresh_rate(&window) * 1000.0) as u64;
 
     let physical_size = window.inner_size();
 
@@ -190,7 +194,10 @@ pub async fn run() -> anyhow::Result<()> {
                 },
             }
         }
-
+        Event::RedrawEventsCleared => {
+            std::thread::sleep(Duration::from_millis(refresh_rate_millis));
+            control_flow.set_poll();
+        }
         Event::WindowEvent {
             ref event,
             window_id,
@@ -248,4 +255,20 @@ pub async fn run() -> anyhow::Result<()> {
         }
         _ => {}
     });
+}
+
+fn monitor_refresh_rate(window: &Window) -> f32 {
+    let mut monitor: Vec<_> = window
+        .available_monitors()
+        .into_iter()
+        .filter_map(|f| f.refresh_rate_millihertz().map(|f| f / 1000))
+        .collect();
+    let refresh_rate = if monitor.is_empty() {
+        60000_f32
+    } else {
+        monitor.sort();
+        monitor[0] as f32
+    };
+    trace!(refresh_rate = refresh_rate);
+    refresh_rate
 }
