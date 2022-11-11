@@ -8,11 +8,16 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.66"
 audio-utils = { version = "0.1.0", path = "../audio-utils" }
-bytemuck = { version = "1.12.2", features = ["derive"] }
-iced_wgpu = { git = "https://github.com/iced-rs/iced", version = "0.5.1" }
-iced_winit = { git = "https://github.com/iced-rs/iced", version = "0.4.0" }
+bytemuck = { version = "1.12.2", features = ["derive"], optional = true }
+clap = { version = "4.0.23", features = ["derive"] }
+iced_wgpu = { git = "https://github.com/iced-rs/iced", optional = true }
+iced_winit = { git = "https://github.com/iced-rs/iced", optional = true }
 mic-rec = { version = "0.1.0", path = "../mic-rec" }
-rustfft = "6.0.1"
 tokio = { version = "1.21.2", features = ["full"] }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["local-time", "env-filter"] }
+
+[features]
+default = [ "graphical", "commandline" ]
+graphical = [ "dep:iced_winit", "dep:iced_wgpu", "dep:bytemuck" ]
+commandline = []
