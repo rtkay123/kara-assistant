@@ -2,8 +2,6 @@ mod controls;
 mod scene;
 mod vertex;
 
-use std::time::Duration;
-
 use audio_utils::fft::spectrum;
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
@@ -23,22 +21,21 @@ use self::{controls::Controls, scene::Scene};
 pub async fn run() -> anyhow::Result<()> {
     let device_name: Option<&str> = None;
     let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name).unwrap();
+    let audio_feed = stream_opts.audio_feed().clone();
+    let sample_rate = stream_opts.sample_rate();
 
     _stream.start_stream()?;
-    std::thread::spawn(move || {
+    tokio::task::spawn_blocking(move || {
         while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
             let _transciption_data =
                 audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
-
-            // A vec containing a tuple of frequencies (0) respective amplitude(1)
-            let _data: Vec<_> = spectrum(&audio_buf, stream_opts.sample_rate() as u16);
         }
     });
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop)?;
 
-    let refresh_rate_millis = (1.0 / monitor_refresh_rate(&window) * 1000.0) as u64;
+    let _refresh_rate_millis = (1.0 / monitor_refresh_rate(&window) * 1000.0) as u64;
 
     let physical_size = window.inner_size();
 
@@ -102,7 +99,7 @@ pub async fn run() -> anyhow::Result<()> {
     let mut staging_belt = wgpu::util::StagingBelt::new(5 * 1024);
 
     // Initialize scene and GUI controls
-    let scene = Scene::new(&device, format);
+    let mut scene = Scene::new(&device, format);
     let controls = Controls::new();
 
     // Initialize iced
@@ -143,6 +140,14 @@ pub async fn run() -> anyhow::Result<()> {
                         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
 
                     let program = state.program();
+
+                    let audio_buf = audio_feed.recv().unwrap_or_else(|_| vec![0.0; 1024]);
+
+                    // A vec containing a tuple of frequencies (0) respective amplitude(1)
+                    let data = spectrum(&audio_buf, sample_rate as u16);
+
+                    let (vertices, indices) = vertex::prepare_data(data);
+                    scene.update_buffers(&device, vertices, indices);
 
                     let view = frame
                         .texture
@@ -193,10 +198,6 @@ pub async fn run() -> anyhow::Result<()> {
                     }
                 },
             }
-        }
-        Event::RedrawEventsCleared => {
-            std::thread::sleep(Duration::from_millis(refresh_rate_millis));
-            control_flow.set_poll();
         }
         Event::WindowEvent {
             ref event,

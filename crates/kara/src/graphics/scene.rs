@@ -7,6 +7,7 @@ pub struct Scene {
     pipeline: wgpu::RenderPipeline,
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
+    num_indices: usize,
 }
 
 impl Scene {
@@ -33,6 +34,7 @@ impl Scene {
             pipeline,
             vertex_buffer,
             index_buffer,
+            num_indices: INDICES.len(),
         }
     }
 
@@ -69,7 +71,32 @@ impl Scene {
         render_pass.set_pipeline(&self.pipeline);
         render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-        render_pass.draw_indexed(0..INDICES.len() as u32, 0, 0..1);
+        render_pass.draw_indexed(0..self.num_indices as u32, 0, 0..1);
+    }
+
+    pub(crate) fn update_buffers(
+        &mut self,
+        device: &wgpu::Device,
+        vertices: Vec<Vertex>,
+        indices: Vec<u16>,
+    ) {
+        self.vertex_buffer = wgpu::util::DeviceExt::create_buffer_init(
+            device,
+            &wgpu::util::BufferInitDescriptor {
+                label: None,
+                contents: bytemuck::cast_slice(&vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            },
+        );
+        self.index_buffer = wgpu::util::DeviceExt::create_buffer_init(
+            device,
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(&indices),
+                usage: wgpu::BufferUsages::INDEX,
+            },
+        );
+        self.num_indices = indices.len();
     }
 }
 

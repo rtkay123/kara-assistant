@@ -46,3 +46,7 @@ pub(crate) const INDICES: &[u16] = &[
     0, 1, 2,
     0, 2, 3
 ];
+
+pub(crate) fn prepare_data(data: Vec<(f32, f32)>) -> (Vec<Vertex>, Vec<u16>) {
+    todo!("draw data {}", data.len());
+}
