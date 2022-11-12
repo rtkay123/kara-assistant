@@ -1,0 +1,109 @@
+[config]
+default_to_workspace = false
+
+[env]
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+ASR_VER = "0.3.42"
+ASR_LIB_DIR = "crates/asr/lib"
+VOSK_URL_STUB = "https://github.com/alphacep/vosk-api/releases/download/v${ASR_VER}"
+ASR_LIB_DL_FILE = "crates/asr/lib.zip"
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/debug"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = ""
+OUT_DIR = "${TARGET_DIR}"
+
+[env.release]
+TARGET_DIR = "${CARGO_MAKE_CRATE_TARGET_DIRECTORY}/release"
+CARGO_MAKE_CARGO_BUILD_TEST_FLAGS = "--release"
+OUT_DIR = "${TARGET_DIR}"
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]
+
+[tasks.check]
+command = "cargo"
+args = ["clippy"]
+
+[tasks.format]
+install_crate = "rustfmt"
+command = "cargo"
+args = ["fmt", "--", "--emit=files"]
+
+[tasks.build]
+command = "cargo"
+args = ["build", "--features", "graphical", "--features", "commandline"]
+dependencies = [
+  "format",
+  "copy-libs"
+]
+
+[tasks.run]
+command = "cargo"
+args = ["run", "--all-features"]
+dependencies = [
+  "build"
+]
+
+[tasks.test-compile]
+command = "cargo"
+args = ["test", "--no-run"]
+dependencies = ["copy-libs"]
+
+[tasks.test]
+command = "cargo"
+args = ["test"]
+dependencies = ["test-compile"]
+
+[tasks.validate-libs]
+run_task = [ { name = ["linux-libs"], condiition = { platforms = ["linux"], fork = true, cleanup_task = "cleanup" }, parallel = true } ]
+
+[tasks.linux-libs]
+private = true
+script_runner = "@duckscript"
+condition = { platforms = ["linux"], files_not_exist = ["${ASR_LIB_DIR}/libvosk.so", "${ASR_LIB_DIR/vosk_api.h}", "${ASR_LIB_DL_FILE}"]  }
+script = '''
+target_arch = get_env CARGO_MAKE_RUST_TARGET_ARCH
+echo Getting libraries for arch: ${target_arch}
+if equals ${target_arch} "x86_64"
+  exec curl -LC - ${VOSK_URL_STUB}/vosk-linux-x86_64-${ASR_VER}.zip -o ${ASR_LIB_DL_FILE}
+elseif equals ${target_arch} "x86"
+  exec curl -LC - ${VOSK_URL_STUB}/vosk-linux-x86-${ASR_VER}.zip -o ${ASR_LIB_DL_FILE}
+elseif equals ${target_arch} "aarch64"
+  exec curl -LC - ${VOSK_URL_STUB}/vosk-linux-aarch64-${ASR_VER}.zip -o ${ASR_LIB_DL_FILE}
+elseif equals ${target_arch} "arm"
+  exec curl -LC - ${VOSK_URL_STUB}/vosk-linux-armv7l-${ASR_VER}.zip -o ${ASR_LIB_DL_FILE}
+else
+  echo "unsupported architecture"
+  assert_error
+end
+'''
+
+[tasks.cleanup]
+private = true
+condition = { platforms = ["linux"], files_exist = ["${ASR_LIB_DL_FILE}"]  }
+script_runner = "@duckscript"
+script = '''
+rm ${ASR_LIB_DL_FILE}
+'''
+dependencies = ["extract-libs"]
+
+[tasks.extract-libs]
+private = true
+condition = { platforms = ["linux"], files_exist = ["${ASR_LIB_DL_FILE}"], files_not_exist = ["${ASR_LIB_DIR}/libvosk.so", "${ASR_LIB_DIR/vosk_api.h}"]  }
+script_runner = "@duckscript"
+script = '''
+exec mkdir -p ${ASR_LIB_DIR}
+exec bsdtar -xzf ${ASR_LIB_DL_FILE} -C ${ASR_LIB_DIR} --strip-components=1
+'''
+
+[tasks.copy-libs]
+private = true
+script_runner = "@duckscript"
+script = '''
+files = glob_array ${ASR_LIB_DIR}/*
+for file in ${files}
+    file_name = basename ${file}
+    cp ${file} ${OUT_DIR}/${file_name}
+end
+'''
+dependencies = ["validate-libs", "cleanup"]
