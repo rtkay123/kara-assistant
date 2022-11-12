@@ -16,7 +16,7 @@ pub(crate) fn initialise_logger() -> Result<()> {
             EnvFilter::from_default_env()
                 .add_directive("wgpu_core=warn".parse()?)
                 .add_directive("naga=warn".parse()?)
-                .add_directive("wgpu_hal=warn".parse()?)
+                .add_directive("wgpu_hal=error".parse()?)
                 .add_directive("iced_wgpu=warn".parse()?),
         )
         .init();

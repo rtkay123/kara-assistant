@@ -13,8 +13,8 @@ pub struct Args {
 #[derive(Default, Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, ValueEnum)]
 pub enum StartupMode {
     /// Start a graphical session
+    #[default]
     Gui,
     /// Start a commandline session
-    #[default]
     Cli,
 }

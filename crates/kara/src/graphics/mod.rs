@@ -1,8 +1,8 @@
+mod audio;
 mod controls;
 mod scene;
 mod vertex;
 
-use audio_utils::fft::spectrum;
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
     conversion, futures, program, renderer,
@@ -16,26 +16,34 @@ use iced_winit::{
 };
 use tracing::trace;
 
+use crate::graphics::audio::Config;
+
 use self::{controls::Controls, scene::Scene};
 
 pub async fn run() -> anyhow::Result<()> {
     let device_name: Option<&str> = None;
     let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name).unwrap();
-    let audio_feed = stream_opts.audio_feed().clone();
-    let sample_rate = stream_opts.sample_rate();
 
     _stream.start_stream()?;
-    tokio::task::spawn_blocking(move || {
-        while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
-            let _transciption_data =
-                audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
-        }
-    });
 
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop)?;
 
-    let _refresh_rate_millis = (1.0 / monitor_refresh_rate(&window) * 1000.0) as u64;
+    let (tx, rx) = crossbeam_channel::unbounded();
+    audio::visualise(
+        monitor_refresh_rate(&window),
+        &Config::default(),
+        rx,
+        tx.clone(),
+    );
+    let inner_audio = tx.clone();
+    tokio::task::spawn_blocking(move || {
+        while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
+            let _transciption_data =
+                audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
+            inner_audio.send(audio::Event::SendData(audio_buf)).unwrap();
+        }
+    });
 
     let physical_size = window.inner_size();
 
@@ -141,12 +149,28 @@ pub async fn run() -> anyhow::Result<()> {
 
                     let program = state.program();
 
-                    let audio_buf = audio_feed.recv().unwrap_or_else(|_| vec![0.0; 1024]);
+                    let (ntx, nrx) = crossbeam_channel::unbounded();
+                    tx.send(audio::Event::RequestData(ntx)).unwrap();
 
-                    // A vec containing a tuple of frequencies (0) respective amplitude(1)
-                    let data = spectrum(&audio_buf, sample_rate as u16);
+                    let mut buffer = nrx.recv().unwrap();
 
-                    let (vertices, indices) = vertex::prepare_data(data);
+                    for i in 0..buffer.len() {
+                        buffer.insert(0, buffer[i * 2]);
+                    }
+
+                    let (top_color, bottom_color) = ([0.0, 0.01, 0.02], [0.01, 0.0, 0.05]);
+
+                    let (vertices, indices) = vertex::prepare_data(
+                        buffer,
+                        1.5,
+                        top_color,
+                        bottom_color,
+                        [
+                            window.inner_size().width as f32 * 0.001,
+                            window.inner_size().height as f32 * 0.001,
+                        ],
+                    );
+
                     scene.update_buffers(&device, vertices, indices);
 
                     let view = frame
@@ -198,6 +222,7 @@ pub async fn run() -> anyhow::Result<()> {
                     }
                 },
             }
+            window.request_redraw();
         }
         Event::WindowEvent {
             ref event,
@@ -258,18 +283,18 @@ pub async fn run() -> anyhow::Result<()> {
     });
 }
 
-fn monitor_refresh_rate(window: &Window) -> f32 {
+fn monitor_refresh_rate(window: &Window) -> u16 {
     let mut monitor: Vec<_> = window
         .available_monitors()
         .into_iter()
         .filter_map(|f| f.refresh_rate_millihertz().map(|f| f / 1000))
         .collect();
     let refresh_rate = if monitor.is_empty() {
-        60000_f32
+        60
     } else {
         monitor.sort();
-        monitor[0] as f32
+        monitor[0]
     };
     trace!(refresh_rate = refresh_rate);
-    refresh_rate
+    refresh_rate as u16
 }
