@@ -203,6 +203,7 @@ pub async fn run() -> anyhow::Result<()> {
                                 window.inner_size().width as f32 * 0.001,
                                 window.inner_size().height as f32 * 0.001,
                             ],
+                            vis.radius,
                         );
 
                         scene.update_buffers(&device, vertices, indices);

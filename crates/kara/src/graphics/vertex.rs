@@ -55,6 +55,7 @@ pub(crate) fn prepare_data(
     top_color: [f32; 3],
     bottom_color: [f32; 3],
     size: [f32; 2],
+    radius: f32,
 ) -> (Vec<Vertex>, Vec<u16>) {
     let mut vertices: Vec<Vertex> = Vec::new();
     let mut indices: Vec<u16> = Vec::new();
@@ -64,7 +65,6 @@ pub(crate) fn prepare_data(
     }
 
     let width = width * 0.005;
-    let radius: f32 = 0.3;
     let mut last_x: f32 = 0.0;
     let mut last_y: f32 = 0.0;
 

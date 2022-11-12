@@ -115,6 +115,13 @@ pub struct Visualiser {
     #[serde(default = "vis_bottom")]
     #[serde(rename = "bottom-colour")]
     pub bottom_colour: String,
+
+    #[serde(default = "vis_radius")]
+    pub radius: f32,
+}
+
+fn vis_radius() -> f32 {
+    0.25
 }
 
 impl Default for Visualiser {
@@ -128,6 +135,7 @@ impl Default for Visualiser {
             density_reduction: default_density(),
             top_colour: vis_top(),
             bottom_colour: vis_bottom(),
+            radius: vis_radius(),
         }
     }
 }
