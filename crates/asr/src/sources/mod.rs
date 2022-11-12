@@ -1,3 +1,5 @@
+pub mod kara;
+
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
@@ -14,11 +16,16 @@ pub enum Source {
     #[serde(rename = "ibm-watson")]
     IBMWatson {
         #[serde(rename = "api-key")]
+        #[serde(default = "empty_string")]
         api_key: String,
 
         #[serde(rename = "service-url")]
+        #[serde(default = "empty_string")]
         service_url: String,
     },
+}
+fn empty_string() -> String {
+    String::default()
 }
 
 impl Default for Source {

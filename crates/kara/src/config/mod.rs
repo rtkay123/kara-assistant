@@ -6,17 +6,23 @@ use std::{
 
 use asr::sources::Source;
 use clap::Parser;
+
+#[cfg(feature = "graphical")]
 use iced_winit::winit::event_loop::EventLoopProxy;
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::events::KaraEvent;
 
-use self::{cli::Args, monitor::monitor_config};
+use self::cli::Args;
+
+#[cfg(feature = "graphical")]
+use self::monitor::monitor_config;
 
 pub mod cli;
 
 #[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Configuration {
+    #[cfg(feature = "graphical")]
     #[serde(default = "default_window")]
     pub window: Window,
 
@@ -28,6 +34,7 @@ pub struct Configuration {
     pub speech_recognition: SpeechRecognition,
 
     #[serde(default = "colours")]
+    #[cfg(feature = "graphical")]
     pub colours: Colours,
 }
 
@@ -74,6 +81,7 @@ pub struct Audio {
     pub sample_rate: Option<f32>,
 
     #[serde(default = "visualiser")]
+    #[cfg(feature = "graphical")]
     pub visualiser: Visualiser,
 }
 
@@ -223,6 +231,7 @@ fn default_window() -> Window {
     Window::default()
 }
 
+#[cfg(feature = "graphical")]
 pub fn read_config_file(event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>) -> Configuration {
     monitor_config(event_loop_proxy);
     match dirs::config_dir() {

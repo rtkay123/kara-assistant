@@ -1,1 +1,3 @@
 \target
+crates/asr/lib
+crates/*/Cargo.lock

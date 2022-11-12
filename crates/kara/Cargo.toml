@@ -25,6 +25,6 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["local-time", "env-filter"] }
 
 [features]
-default = ["graphical", "commandline"]
+default = []
 graphical = ["dep:iced_winit", "dep:iced_wgpu", "dep:bytemuck"]
 commandline = []

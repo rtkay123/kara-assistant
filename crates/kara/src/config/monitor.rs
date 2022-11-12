@@ -1,9 +1,10 @@
 use std::{
     fmt::Debug,
     path::Path,
-    sync::{mpsc, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 
+#[cfg(feature = "graphical")]
 use iced_winit::winit::event_loop::EventLoopProxy;
 use notify::{Config, Event, RecommendedWatcher, RecursiveMode, Watcher};
 use tracing::{error, trace, warn};
@@ -12,6 +13,7 @@ use crate::events::KaraEvent;
 
 use super::read_file;
 
+#[cfg(feature = "graphical")]
 pub fn monitor_config(event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>) {
     if let Some(path) = dirs::config_dir() {
         tokio::task::spawn_blocking(move || {
@@ -22,8 +24,11 @@ pub fn monitor_config(event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>) {
     }
 }
 
-fn async_watcher() -> notify::Result<(RecommendedWatcher, mpsc::Receiver<notify::Result<Event>>)> {
-    let (tx, rx) = mpsc::channel();
+fn async_watcher() -> notify::Result<(
+    RecommendedWatcher,
+    crossbeam_channel::Receiver<notify::Result<Event>>,
+)> {
+    let (tx, rx) = crossbeam_channel::unbounded();
 
     // Automatically select the best implementation for your platform.
     // You can also access each implementation directly e.g. INotifyWatcher.
@@ -37,6 +42,7 @@ fn async_watcher() -> notify::Result<(RecommendedWatcher, mpsc::Receiver<notify:
     Ok((watcher, rx))
 }
 
+#[cfg(feature = "graphical")]
 #[tracing::instrument]
 fn async_watch(
     path: impl AsRef<Path> + Debug,
