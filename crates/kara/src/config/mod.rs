@@ -100,11 +100,13 @@ pub struct Visualiser {
     #[serde(default = "default_density")]
     pub density_reduction: u16,
 
-    #[serde(default = "default_background")]
-    pub top_color: String,
+    #[serde(default = "vis_top")]
+    #[serde(rename = "top-colour")]
+    pub top_colour: String,
 
-    #[serde(default = "default_foreground")]
-    pub bottom_color: String,
+    #[serde(default = "vis_bottom")]
+    #[serde(rename = "bottom-colour")]
+    pub bottom_colour: String,
 }
 
 impl Default for Visualiser {
@@ -116,10 +118,17 @@ impl Default for Visualiser {
             smoothing_amount: default_density(),
             resolution: default_resolution(),
             density_reduction: default_density(),
-            top_color: default_foreground(),
-            bottom_color: default_background(),
+            top_colour: vis_top(),
+            bottom_colour: vis_bottom(),
         }
     }
+}
+fn vis_top() -> String {
+    String::from("#da294f")
+}
+
+fn vis_bottom() -> String {
+    String::from("#02000D")
 }
 
 fn visualiser() -> Visualiser {

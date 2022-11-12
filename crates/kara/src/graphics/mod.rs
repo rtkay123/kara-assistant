@@ -5,7 +5,7 @@ mod vertex;
 
 use std::sync::{Arc, Mutex};
 
-use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
+use iced_wgpu::{wgpu, Backend, Renderer, Settings, Viewport};
 use iced_winit::{
     conversion, futures, program, renderer,
     winit::{
@@ -18,7 +18,11 @@ use iced_winit::{
 };
 use tracing::trace;
 
-use crate::{config::read_config_file, events::KaraEvent};
+use crate::{
+    config::{read_config_file, Visualiser},
+    events::KaraEvent,
+    graphics::controls::map_colour,
+};
 
 use self::{controls::Controls, scene::Scene};
 
@@ -177,7 +181,18 @@ pub async fn run() -> anyhow::Result<()> {
                             buffer.insert(0, buffer[i * 2]);
                         }
 
-                        let (top_color, bottom_color) = ([0.0, 0.01, 0.02], [0.01, 0.0, 0.05]);
+                        let conf = config_file.lock().unwrap();
+                        let vis = match &conf.audio {
+                            Some(audio) => audio.visualiser.clone(),
+                            None => Visualiser::default(),
+                        };
+                        drop(conf);
+                        let (tr, tg, tb) =
+                            map_colour(&vis.top_colour, controls::ColourType::Foreground);
+                        let (br, bg, bb) =
+                            map_colour(&vis.bottom_colour, controls::ColourType::Foreground);
+
+                        let (top_color, bottom_color) = ([tr, tg, tb], [br, bg, bb]);
 
                         let (vertices, indices) = vertex::prepare_data(
                             buffer,
@@ -282,13 +297,15 @@ pub async fn run() -> anyhow::Result<()> {
                 // If there are events pending
                 if !state.is_queue_empty() {
                     // We update iced
+                    let program = state.program();
+                    let text_colour = program.foreground_colour();
                     let _ = state.update(
                         viewport.logical_size(),
                         conversion::cursor_position(cursor_position, viewport.scale_factor()),
                         &mut renderer,
                         &iced_wgpu::Theme::Dark,
                         &renderer::Style {
-                            text_color: Color::WHITE,
+                            text_color: text_colour,
                         },
                         &mut clipboard,
                         &mut debug,
@@ -299,13 +316,26 @@ pub async fn run() -> anyhow::Result<()> {
                 }
             }
             Event::UserEvent(event) => {
-                println!("received user event");
                 if let KaraEvent::ReloadConfiguration(new_config) = &event {
                     let mut config = config_file.lock().unwrap();
                     *config = new_config.clone();
                     window.set_title(&new_config.window.title);
                     window.set_decorations(new_config.window.decorations);
                     window.request_redraw();
+
+                    let program = state.program();
+                    let text_colour = program.foreground_colour();
+                    state.update(
+                        viewport.logical_size(),
+                        conversion::cursor_position(cursor_position, viewport.scale_factor()),
+                        &mut renderer,
+                        &iced_wgpu::Theme::Dark,
+                        &renderer::Style {
+                            text_color: text_colour,
+                        },
+                        &mut clipboard,
+                        &mut debug,
+                    );
                 }
                 state.queue_message(event);
             }

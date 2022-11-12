@@ -91,12 +91,12 @@ impl Program for Controls {
 }
 
 #[derive(Debug, Clone, Copy)]
-enum ColourType {
+pub(crate) enum ColourType {
     Background,
     Foreground,
 }
 
-fn map_colour(colours: &str, colour_type: ColourType) -> (f32, f32, f32) {
+pub(crate) fn map_colour(colours: &str, colour_type: ColourType) -> (f32, f32, f32) {
     match Srgb::from_str(colours) {
         Ok(rgb) => (to_float(rgb.red), to_float(rgb.green), to_float(rgb.blue)),
         Err(e) => {
