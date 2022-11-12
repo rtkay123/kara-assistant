@@ -72,6 +72,69 @@ pub struct Audio {
 
     #[serde(rename = "sample-rate")]
     pub sample_rate: Option<f32>,
+
+    #[serde(default = "visualiser")]
+    pub visualiser: Visualiser,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Visualiser {
+    #[serde(default = "default_loudness")]
+    pub loudness: f32,
+
+    #[serde(default = "default_density")]
+    pub buffering: u16,
+
+    #[serde(rename = "smoothing-size")]
+    #[serde(default = "default_density")]
+    pub smoothing_size: u16,
+
+    #[serde(rename = "smoothing-amount")]
+    #[serde(default = "default_density")]
+    pub smoothing_amount: u16,
+
+    #[serde(default = "default_resolution")]
+    pub resolution: u16,
+
+    #[serde(rename = "density-reduction")]
+    #[serde(default = "default_density")]
+    pub density_reduction: u16,
+
+    #[serde(default = "default_background")]
+    pub top_color: String,
+
+    #[serde(default = "default_foreground")]
+    pub bottom_color: String,
+}
+
+impl Default for Visualiser {
+    fn default() -> Self {
+        Self {
+            loudness: default_loudness(),
+            buffering: default_density(),
+            smoothing_size: default_density(),
+            smoothing_amount: default_density(),
+            resolution: default_resolution(),
+            density_reduction: default_density(),
+            top_color: default_foreground(),
+            bottom_color: default_background(),
+        }
+    }
+}
+
+fn visualiser() -> Visualiser {
+    Visualiser::default()
+}
+
+fn default_density() -> u16 {
+    5
+}
+fn default_resolution() -> u16 {
+    3000
+}
+
+fn default_loudness() -> f32 {
+    1.5
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]

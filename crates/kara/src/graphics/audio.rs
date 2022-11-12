@@ -1,6 +1,12 @@
-use std::{ops::Range, time::Duration};
+use std::{
+    ops::Range,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use audio_utils::fft::{convert_buffer, merge_buffers};
+
+use crate::config::{Configuration, Visualiser};
 
 #[derive(Debug, Clone)]
 pub enum Event {
@@ -9,46 +15,16 @@ pub enum Event {
     RequestRefresh,
 }
 
-#[derive(Debug, Clone)]
-pub struct Config {
-    pub buffering: u8,
-    pub smoothing_size: u8,
-    pub smoothing_amount: u8,
-    pub resolution: u16,
-    pub refresh_rate: u8,
-    pub frequency_scale_range: Range<u16>,
-    pub frequency_scale_amount: u8,
-    pub density_reduction: u8,
-    pub max_frequency: u16,
-    pub volume: f32,
-}
-impl Default for Config {
-    fn default() -> Self {
-        Config {
-            buffering: 5,
-            smoothing_size: 10,
-            smoothing_amount: 5,
-            resolution: 3000,
-            refresh_rate: 60,
-            frequency_scale_range: Range {
-                start: 50,
-                end: 1000,
-            },
-            frequency_scale_amount: 1,
-            density_reduction: 5,
-            max_frequency: 22050,
-            volume: 1.0,
-        }
-    }
-}
-
 pub fn visualise(
     refresh_rate: u16,
-    config: &Config,
+    config: Arc<Mutex<Configuration>>,
     event_receiver: crossbeam_channel::Receiver<Event>,
     event_sender: crossbeam_channel::Sender<Event>,
 ) {
-    let config = config.clone();
+    let frequency_scale_range = Range {
+        start: 50,
+        end: 1000,
+    };
     tokio::task::spawn_blocking(move || {
         let mut buffer: Vec<f32> = Vec::new();
         let mut calculated_buffer: Vec<f32> = Vec::new();
@@ -58,17 +34,22 @@ pub fn visualise(
         loop {
             match event_receiver.recv().unwrap() {
                 Event::SendData(mut b) => {
+                    let config = config.lock().unwrap();
+                    let config = match &config.audio {
+                        Some(audio) => audio.visualiser.clone(),
+                        None => Visualiser::default(),
+                    };
                     buffer.append(&mut b);
                     let resolution = config.resolution.into();
                     while buffer.len() > resolution {
                         let c_b = convert_buffer(
                             &buffer[0..resolution],
-                            config.max_frequency,
-                            config.volume,
-                            &config.frequency_scale_range,
-                            config.smoothing_amount,
-                            config.smoothing_size,
-                            config.frequency_scale_amount,
+                            22050,
+                            config.loudness,
+                            &frequency_scale_range,
+                            config.smoothing_amount as u8,
+                            config.smoothing_size as u8,
+                            1,
                         );
 
                         calculated_buffer = if !calculated_buffer.is_empty() {
@@ -86,6 +67,11 @@ pub fn visualise(
                         .expect("audio thread lost connection to bridge");
                 }
                 Event::RequestRefresh => {
+                    let config = config.lock().unwrap();
+                    let config = match &config.audio {
+                        Some(audio) => audio.visualiser.clone(),
+                        None => Visualiser::default(),
+                    };
                     if !calculated_buffer.is_empty() {
                         smoothing_buffer.push(calculated_buffer.clone());
                     }
