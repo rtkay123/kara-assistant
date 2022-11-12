@@ -1,0 +1,24 @@
+[window]
+title = "Kara"
+decorations = false
+opacity = 1.0
+
+[audio]
+input-device-name = "default"
+sample-rate = 44100
+
+[colours]
+background = "#000000"
+foreground = "#FFFFFF"
+
+[speech-recognition]
+default_source = "kara"
+
+  [[speech-recognition.sources]]
+  source = "kara"
+  model-path = ""
+
+  #[[speech-recognition.sources]]
+  #source = "ibm-watson"
+  #api-key = ""
+  #service-url = ""
