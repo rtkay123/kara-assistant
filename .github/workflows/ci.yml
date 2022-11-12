@@ -12,7 +12,7 @@ on:
 env:
   CARGO_INCREMENTAL: 0
   CARGO_TERM_COLOR: always
-  NATIVE_DEPS: libasound2-dev
+  NATIVE_DEPS: libasound2-dev libarchive-tools
 
 jobs:
   lints:
@@ -31,7 +31,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Install apt packages
-        run: 'sudo apt install ${{ env.NATIVE_DEPS }}'
+        run: sudo apt install ${{ env.NATIVE_DEPS }}
 
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --all-features
@@ -52,13 +52,16 @@ jobs:
       - name: Install rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: '${{ matrix.toolchain }}'
+          toolchain: ${{ matrix.toolchain }}
+
+      - name: Install cargo-make
+        run: cargo install --debug cargo-make
 
       - name: Install apt packages
-        run: 'sudo apt install ${{ env.NATIVE_DEPS }}'
+        run: sudo apt install ${{ env.NATIVE_DEPS }}
 
       - name: Compile Tests
-        run: cargo test --no-run
+        run: cargo make test-compile
 
       - name: Test
-        run: cargo test
+        run: cargo make test
