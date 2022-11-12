@@ -3,31 +3,46 @@ mod controls;
 mod scene;
 mod vertex;
 
+use std::sync::{Arc, Mutex};
+
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
     conversion, futures, program, renderer,
     winit::{
         dpi::PhysicalPosition,
         event::*,
-        event_loop::{ControlFlow, EventLoop},
+        event_loop::{ControlFlow, EventLoop, EventLoopBuilder},
         window::{Window, WindowBuilder},
     },
     Clipboard, Debug, Size,
 };
 use tracing::trace;
 
-use crate::graphics::audio::Config;
+use crate::{config::read_config_file, events::KaraEvent, graphics::audio::Config};
 
 use self::{controls::Controls, scene::Scene};
 
 pub async fn run() -> anyhow::Result<()> {
+    let event_loop: EventLoop<KaraEvent> = EventLoopBuilder::with_user_event().build();
+
+    let event_loop_proxy = Arc::new(Mutex::new(event_loop.create_proxy()));
+
+    let config_file = read_config_file(Arc::clone(&event_loop_proxy));
+
+    let window_settings = &config_file.window;
+
+    let window = WindowBuilder::new()
+        .with_title(&window_settings.title)
+        .with_transparent(true)
+        .with_decorations(window_settings.decorations)
+        .build(&event_loop)?;
+
+    let controls = Controls::new(&config_file);
+
     let device_name: Option<&str> = None;
     let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name).unwrap();
 
     _stream.start_stream()?;
-
-    let event_loop = EventLoop::new();
-    let window = WindowBuilder::new().build(&event_loop)?;
 
     let (tx, rx) = crossbeam_channel::unbounded();
     audio::visualise(
@@ -108,7 +123,6 @@ pub async fn run() -> anyhow::Result<()> {
 
     // Initialize scene and GUI controls
     let mut scene = Scene::new(&device, format);
-    let controls = Controls::new();
 
     // Initialize iced
     let mut debug = Debug::new();
@@ -180,7 +194,7 @@ pub async fn run() -> anyhow::Result<()> {
                     {
                         // We clear the frame
                         let mut render_pass =
-                            scene.clear(&view, &mut encoder, program.background_color());
+                            scene.clear(&view, &mut encoder, program.background_colour());
 
                         // Draw the scene
                         scene.draw(&mut render_pass);
@@ -278,6 +292,15 @@ pub async fn run() -> anyhow::Result<()> {
                 // and request a redraw
                 window.request_redraw();
             }
+        }
+        Event::UserEvent(event) => {
+            println!("received user event");
+            if let KaraEvent::ReloadConfiguration(config) = &event {
+                window.set_title(&config.window.title);
+                window.set_decorations(config.window.decorations);
+                window.request_redraw();
+            }
+            state.queue_message(event);
         }
         _ => {}
     });

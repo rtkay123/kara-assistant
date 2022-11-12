@@ -1,8 +1,198 @@
-use clap::Parser;
+pub mod monitor;
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
-use self::cli::Args;
+use asr::sources::Source;
+use clap::Parser;
+use iced_winit::winit::event_loop::EventLoopProxy;
+use serde::{Deserialize, Deserializer, Serialize};
+
+use crate::events::KaraEvent;
+
+use self::{cli::Args, monitor::monitor_config};
 
 pub mod cli;
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct Configuration {
+    #[serde(default = "default_window")]
+    pub window: Window,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audio: Option<Audio>,
+
+    #[serde(rename = "speech-recognition")]
+    #[serde(default = "default_recogniser")]
+    pub speech_recognition: SpeechRecognition,
+
+    #[serde(default = "colours")]
+    pub colours: Colours,
+}
+
+fn colours() -> Colours {
+    Colours::default()
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct Colours {
+    #[serde(default = "default_background")]
+    pub background: String,
+
+    #[serde(default = "default_foreground")]
+    pub foreground: String,
+}
+
+impl Default for Colours {
+    fn default() -> Self {
+        Self {
+            background: default_background(),
+            foreground: default_foreground(),
+        }
+    }
+}
+
+fn default_background() -> String {
+    "#000000".to_owned()
+}
+
+fn default_foreground() -> String {
+    "#FFFFFF".to_owned()
+}
+
+fn default_recogniser() -> SpeechRecognition {
+    SpeechRecognition::default()
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct Audio {
+    #[serde(rename = "input-device-name")]
+    pub input_device_name: Option<String>,
+
+    #[serde(rename = "sample-rate")]
+    pub sample_rate: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct SpeechRecognition {
+    #[serde(default = "default_source")]
+    #[serde(deserialize_with = "de_source_name_only")]
+    #[serde(rename = "default-source")]
+    pub default_source: String,
+
+    #[serde(default = "sources")]
+    pub sources: Vec<Source>,
+}
+
+fn de_source_name_only<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: Source = Deserialize::deserialize(deserializer)?;
+    // do better hex decoding than this
+    Ok(s.to_string())
+}
+
+impl Default for SpeechRecognition {
+    fn default() -> Self {
+        Self {
+            default_source: Source::default().to_string(),
+            sources: sources(),
+        }
+    }
+}
+
+fn default_source() -> String {
+    Source::default().to_string()
+}
+
+fn sources() -> Vec<Source> {
+    // Single source
+    vec![Source::default()]
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct Window {
+    #[serde(default = "window_name")]
+    pub title: String,
+
+    #[serde(default = "disable_decorations")]
+    pub decorations: bool,
+
+    #[serde(default = "set_opacity")]
+    pub opacity: f32,
+}
+
+impl Default for Window {
+    fn default() -> Self {
+        Self {
+            title: window_name(),
+            decorations: disable_decorations(),
+            opacity: set_opacity(),
+        }
+    }
+}
+
+fn window_name() -> String {
+    let crate_name = env!("CARGO_CRATE_NAME");
+    format!("{}{}", &crate_name[..1], &crate_name[1..])
+}
+
+fn disable_decorations() -> bool {
+    false
+}
+
+fn set_opacity() -> f32 {
+    1.0
+}
+
+fn default_window() -> Window {
+    Window::default()
+}
+
+pub fn read_config_file(event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>) -> Configuration {
+    monitor_config(event_loop_proxy);
+    match dirs::config_dir() {
+        Some(mut base) => {
+            let mut nested = base.clone();
+            nested.push("kara/kara.toml");
+            if nested.exists() {
+                if let Ok(Ok(file)) = read_file(&nested) {
+                    file
+                } else {
+                    try_secondary(&mut base)
+                }
+            } else {
+                try_secondary(&mut base)
+            }
+        }
+        None => use_default(),
+    }
+}
+
+fn read_file(
+    path: impl AsRef<Path>,
+) -> Result<Result<Configuration, toml::de::Error>, std::io::Error> {
+    std::fs::read_to_string(&path).map(|s| toml::from_str::<Configuration>(&s))
+}
+
+fn use_default() -> Configuration {
+    let bytes = include_str!("../../../../examples/kara.toml");
+    match toml::from_str(bytes) {
+        Ok(val) => val,
+        Err(e) => panic!("{:#?}", e),
+    }
+}
+
+fn try_secondary(base: &mut std::path::PathBuf) -> Configuration {
+    base.push("kara.toml");
+    if let Ok(Ok(file)) = read_file(&base) {
+        file
+    } else {
+        use_default()
+    }
+}
 
 pub fn initialise_application() -> Args {
     Args::parse()

@@ -1,105 +1,114 @@
+use std::str::FromStr;
+
 use iced_wgpu::Renderer;
-use iced_winit::widget::{slider, text_input, Column, Row, Text};
-use iced_winit::{Alignment, Color, Command, Element, Length, Program};
+use iced_winit::widget::{Column, Container, Text};
+use iced_winit::{alignment, Color, Command, Element, Length, Program};
+use palette::Srgb;
+use tracing::error;
+
+use crate::config::Configuration;
+use crate::events::KaraEvent;
 
 pub struct Controls {
     background_color: Color,
+    foreground_color: Color,
     text: String,
 }
 
-#[derive(Debug, Clone)]
-pub enum Message {
-    BackgroundColorChanged(Color),
-    TextChanged(String),
-}
-
 impl Controls {
-    pub fn new() -> Controls {
+    pub fn new(config: &Configuration) -> Controls {
+        let (bg_r, bg_g, bg_b) = map_colour(&config.colours.background, ColourType::Background);
+        let opacity = config.window.opacity;
+        let (fg_r, fg_g, fg_b) = map_colour(&config.colours.foreground, ColourType::Foreground);
+
         Controls {
-            background_color: Color::BLACK,
-            text: Default::default(),
+            background_color: Color {
+                r: bg_r,
+                g: bg_g,
+                b: bg_b,
+                a: opacity,
+            },
+            text: String::from("Hi, I'm Kara"),
+            foreground_color: Color {
+                r: fg_r,
+                g: fg_g,
+                b: fg_b,
+                a: 1.0,
+            },
         }
     }
 
-    pub fn background_color(&self) -> Color {
+    pub fn background_colour(&self) -> Color {
         self.background_color
+    }
+
+    pub fn foreground_colour(&self) -> Color {
+        self.foreground_color
     }
 }
 
 impl Program for Controls {
     type Renderer = Renderer;
-    type Message = Message;
+    type Message = KaraEvent;
 
-    fn update(&mut self, message: Message) -> Command<Message> {
+    fn update(&mut self, message: KaraEvent) -> Command<KaraEvent> {
         match message {
-            Message::BackgroundColorChanged(color) => {
-                self.background_color = color;
-            }
-            Message::TextChanged(text) => {
-                self.text = text;
-            }
-        }
+            KaraEvent::ReloadConfiguration(config) => {
+                let (bg_r, bg_g, bg_b) =
+                    map_colour(&config.colours.background, ColourType::Background);
+                let opacity = config.window.opacity;
+                let (fg_r, fg_g, fg_b) =
+                    map_colour(&config.colours.foreground, ColourType::Foreground);
 
+                self.background_color = Color {
+                    r: bg_r,
+                    g: bg_g,
+                    b: bg_b,
+                    a: opacity,
+                };
+
+                self.foreground_color = Color {
+                    r: fg_r,
+                    g: fg_g,
+                    b: fg_b,
+                    a: 1.0,
+                };
+            }
+            _ => {}
+        }
         Command::none()
     }
 
-    fn view(&self) -> Element<Message, Renderer> {
-        let background_color = self.background_color;
-        let text = &self.text;
-
-        let sliders = Row::new()
-            .width(Length::Units(500))
-            .spacing(20)
-            .push(
-                slider(0.0..=1.0, background_color.r, move |r| {
-                    Message::BackgroundColorChanged(Color {
-                        r,
-                        ..background_color
-                    })
-                })
-                .step(0.01),
-            )
-            .push(
-                slider(0.0..=1.0, background_color.g, move |g| {
-                    Message::BackgroundColorChanged(Color {
-                        g,
-                        ..background_color
-                    })
-                })
-                .step(0.01),
-            )
-            .push(
-                slider(0.0..=1.0, background_color.b, move |b| {
-                    Message::BackgroundColorChanged(Color {
-                        b,
-                        ..background_color
-                    })
-                })
-                .step(0.01),
-            );
-
-        Row::new()
+    fn view(&self) -> Element<KaraEvent, Renderer> {
+        let content = Column::new().push(Text::new(&self.text).size(48));
+        Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
-            .align_items(Alignment::End)
-            .push(
-                Column::new()
-                    .width(Length::Fill)
-                    .align_items(Alignment::End)
-                    .push(
-                        Column::new()
-                            .padding(10)
-                            .spacing(10)
-                            .push(Text::new("Background color").style(Color::WHITE))
-                            .push(sliders)
-                            .push(
-                                Text::new(format!("{:?}", background_color))
-                                    .size(14)
-                                    .style(Color::WHITE),
-                            )
-                            .push(text_input("Placeholder", text, Message::TextChanged)),
-                    ),
-            )
+            .align_x(alignment::Horizontal::Center)
+            .align_y(alignment::Vertical::Center)
             .into()
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ColourType {
+    Background,
+    Foreground,
+}
+
+fn map_colour(colours: &str, colour_type: ColourType) -> (f32, f32, f32) {
+    match Srgb::from_str(colours) {
+        Ok(rgb) => (to_float(rgb.red), to_float(rgb.green), to_float(rgb.blue)),
+        Err(e) => {
+            error!("{e}");
+            match colour_type {
+                ColourType::Background => (0.0, 0.0, 0.0),
+                ColourType::Foreground => (1.0, 1.0, 1.0),
+            }
+        }
+    }
+}
+
+fn to_float(val: u8) -> f32 {
+    val as f32 / 255.0
 }
