@@ -5,7 +5,7 @@ mod vertex;
 
 use std::sync::{Arc, Mutex};
 
-use iced_wgpu::{wgpu, Backend, Renderer, Settings, Viewport};
+use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
 use iced_winit::{
     conversion, futures, program, renderer,
     winit::{
@@ -297,15 +297,13 @@ pub async fn run() -> anyhow::Result<()> {
                 // If there are events pending
                 if !state.is_queue_empty() {
                     // We update iced
-                    let program = state.program();
-                    let text_colour = program.foreground_colour();
                     let _ = state.update(
                         viewport.logical_size(),
                         conversion::cursor_position(cursor_position, viewport.scale_factor()),
                         &mut renderer,
                         &iced_wgpu::Theme::Dark,
                         &renderer::Style {
-                            text_color: text_colour,
+                            text_color: Color::WHITE,
                         },
                         &mut clipboard,
                         &mut debug,
@@ -322,20 +320,6 @@ pub async fn run() -> anyhow::Result<()> {
                     window.set_title(&new_config.window.title);
                     window.set_decorations(new_config.window.decorations);
                     window.request_redraw();
-
-                    let program = state.program();
-                    let text_colour = program.foreground_colour();
-                    state.update(
-                        viewport.logical_size(),
-                        conversion::cursor_position(cursor_position, viewport.scale_factor()),
-                        &mut renderer,
-                        &iced_wgpu::Theme::Dark,
-                        &renderer::Style {
-                            text_color: text_colour,
-                        },
-                        &mut clipboard,
-                        &mut debug,
-                    );
                 }
                 state.queue_message(event);
             }

@@ -2,6 +2,7 @@
 # title = "Kara"
 # decorations = false
 # opacity = 1.0
+# padding = 150
 # 
 # [audio]
 # input-device-name = "default"

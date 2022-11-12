@@ -202,6 +202,9 @@ pub struct Window {
 
     #[serde(default = "set_opacity")]
     pub opacity: f32,
+
+    #[serde(default = "set_padding")]
+    pub padding: u16,
 }
 
 impl Default for Window {
@@ -210,8 +213,13 @@ impl Default for Window {
             title: window_name(),
             decorations: disable_decorations(),
             opacity: set_opacity(),
+            padding: set_padding(),
         }
     }
+}
+
+fn set_padding() -> u16 {
+    0
 }
 
 fn window_name() -> String {

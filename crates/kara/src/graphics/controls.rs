@@ -12,6 +12,7 @@ use crate::events::KaraEvent;
 pub struct Controls {
     background_color: Color,
     foreground_color: Color,
+    padding: u16,
     text: String,
 }
 
@@ -28,13 +29,14 @@ impl Controls {
                 b: bg_b,
                 a: opacity,
             },
-            text: String::from("Hi, I'm Kara"),
+            text: String::from("Hello there!"),
             foreground_color: Color {
                 r: fg_r,
                 g: fg_g,
                 b: fg_b,
                 a: 1.0,
             },
+            padding: config.window.padding,
         }
     }
 
@@ -73,6 +75,7 @@ impl Program for Controls {
                     b: fg_b,
                     a: 1.0,
                 };
+                self.padding = config.window.padding;
             }
             _ => {}
         }
@@ -80,12 +83,17 @@ impl Program for Controls {
     }
 
     fn view(&self) -> Element<KaraEvent, Renderer> {
-        let content = Column::new().push(Text::new(&self.text).size(48));
+        let content = Column::new().push(
+            Text::new(&self.text)
+                .style(self.foreground_colour())
+                .size(48),
+        );
         Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
             .align_x(alignment::Horizontal::Center)
-            .align_y(alignment::Vertical::Center)
+            .align_y(alignment::Vertical::Bottom)
+            .padding(self.padding)
             .into()
     }
 }
@@ -100,7 +108,7 @@ pub(crate) fn map_colour(colours: &str, colour_type: ColourType) -> (f32, f32, f
     match Srgb::from_str(colours) {
         Ok(rgb) => (to_float(rgb.red), to_float(rgb.green), to_float(rgb.blue)),
         Err(e) => {
-            error!("{e}");
+            error!(value = colours, "{e}");
             match colour_type {
                 ColourType::Background => (0.0, 0.0, 0.0),
                 ColourType::Foreground => (1.0, 1.0, 1.0),
