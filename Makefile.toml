@@ -46,12 +46,12 @@ dependencies = [
 
 [tasks.test-compile]
 command = "cargo"
-args = ["test", "--no-run"]
+args = ["test", "--no-run", "--all-features"]
 dependencies = ["copy-libs"]
 
 [tasks.test]
 command = "cargo"
-args = ["test"]
+args = ["test", "--all-features"]
 dependencies = ["test-compile"]
 
 [tasks.validate-libs]
