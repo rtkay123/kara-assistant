@@ -1,34 +1,34 @@
-[window]
-title = "Kara"
-decorations = false
-opacity = 1.0
-
-[audio]
-input-device-name = "default"
-sample-rate = 44100
-
-  [audio.visualiser]
-  loudness = 1
-  buffering = 5
-  smoothing-size = 10
-  smoothing-amount = 5
-  resolution = 3_000
-  density-reduction = 5
-  top-color = "#000000"
-  bottom-color = "#000000"
-
-[colours]
-background = "#000000"
-foreground = "#FFFFFF"
-
-[speech-recognition]
-default_source = "kara"
-
-  [[speech-recognition.sources]]
-  source = "kara"
-  model-path = ""
-
-  #[[speech-recognition.sources]]
-  #source = "ibm-watson"
-  #api-key = ""
-  #service-url = ""
+# [window]
+# title = "Kara"
+# decorations = false
+# opacity = 1.0
+# 
+# [audio]
+# input-device-name = "default"
+# sample-rate = 44100
+# 
+#   [audio.visualiser]
+#   loudness = 1
+#   buffering = 5
+#   smoothing-size = 10
+#   smoothing-amount = 5
+#   resolution = 3_000
+#   density-reduction = 5
+#   top-colour = "#DA294F"
+#   bottom-colour = "#02000D"
+# 
+# [colours]
+# background = "#000000"
+# foreground = "#FFFFFF"
+# 
+# [speech-recognition]
+# default_source = "kara"
+# 
+#   [[speech-recognition.sources]]
+#   source = "kara"
+#   model-path = ""
+# 
+#   #[[speech-recognition.sources]]
+#   #source = "ibm-watson"
+#   #api-key = ""
+#   #service-url = ""
