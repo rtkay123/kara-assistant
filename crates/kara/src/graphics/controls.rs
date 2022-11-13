@@ -14,6 +14,7 @@ pub struct Controls {
     foreground_color: Color,
     padding: u16,
     text: String,
+    font_size: u16,
 }
 
 impl Controls {
@@ -37,6 +38,7 @@ impl Controls {
                 a: 1.0,
             },
             padding: config.window.padding,
+            font_size: config.window.font_size,
         }
     }
 
@@ -76,7 +78,9 @@ impl Program for Controls {
                     a: 1.0,
                 };
                 self.padding = config.window.padding;
+                self.font_size = config.window.font_size;
             }
+            KaraEvent::Close => {}
             _ => {}
         }
         Command::none()
@@ -86,7 +90,7 @@ impl Program for Controls {
         let content = Column::new().push(
             Text::new(&self.text)
                 .style(self.foreground_colour())
-                .size(48),
+                .size(self.font_size),
         );
         Container::new(content)
             .width(Length::Fill)

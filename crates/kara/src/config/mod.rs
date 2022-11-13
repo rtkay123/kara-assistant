@@ -213,6 +213,10 @@ pub struct Window {
 
     #[serde(default = "set_padding")]
     pub padding: u16,
+
+    #[serde(default = "font_size")]
+    #[serde(rename = "font-size")]
+    pub font_size: u16,
 }
 
 impl Default for Window {
@@ -222,12 +226,17 @@ impl Default for Window {
             decorations: disable_decorations(),
             opacity: set_opacity(),
             padding: set_padding(),
+            font_size: font_size(),
         }
     }
 }
 
 fn set_padding() -> u16 {
     0
+}
+
+fn font_size() -> u16 {
+    48
 }
 
 fn window_name() -> String {

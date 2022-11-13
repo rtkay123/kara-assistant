@@ -3,6 +3,7 @@
 # decorations = false
 # opacity = 1.0
 # padding = 150
+# font-size = 48
 # 
 # [audio]
 # input-device-name = "default"
