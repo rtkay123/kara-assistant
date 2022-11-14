@@ -3,6 +3,12 @@ mod controls;
 mod scene;
 mod vertex;
 
+#[cfg(feature = "graphical")]
+pub use audio::Event as AudioEvent;
+
+#[cfg(feature = "graphical")]
+pub use audio::visualise;
+
 use std::sync::{Arc, Mutex};
 
 use iced_wgpu::{wgpu, Backend, Color, Renderer, Settings, Viewport};
@@ -18,7 +24,9 @@ use iced_winit::{
 };
 use tracing::trace;
 
+use crate::audio::get_audio_device_info;
 use crate::{
+    audio::start_listening,
     config::{read_config_file, Visualiser},
     events::KaraEvent,
     graphics::controls::map_colour,
@@ -32,6 +40,7 @@ pub async fn run() -> anyhow::Result<()> {
     let event_loop_proxy = Arc::new(Mutex::new(event_loop.create_proxy()));
 
     let config_file = read_config_file(Arc::clone(&event_loop_proxy));
+    let (device_name, _sample_rate) = get_audio_device_info(&config_file);
 
     let window_settings = &config_file.window;
 
@@ -45,21 +54,14 @@ pub async fn run() -> anyhow::Result<()> {
 
     let config_file = Arc::new(Mutex::new(config_file));
 
-    let device_name: Option<&str> = None;
     let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name)?;
 
     _stream.start_stream()?;
 
     let (tx, rx) = crossbeam_channel::unbounded();
-    audio::visualise(Arc::clone(&config_file), rx);
-    let inner_audio = tx.clone();
-    tokio::task::spawn_blocking(move || {
-        while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
-            let _transciption_data =
-                audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
-            inner_audio.send(audio::Event::SendData(audio_buf)).unwrap();
-        }
-    });
+
+    // send to visualiser
+    start_listening(stream_opts, tx.clone(), Arc::clone(&config_file), rx);
 
     let physical_size = window.inner_size();
 
@@ -67,6 +69,7 @@ pub async fn run() -> anyhow::Result<()> {
         Size::new(physical_size.width, physical_size.height),
         window.scale_factor(),
     );
+
     let mut cursor_position = PhysicalPosition::new(-1.0, -1.0);
     let mut modifiers = ModifiersState::default();
     let mut clipboard = Clipboard::connect(&window);
