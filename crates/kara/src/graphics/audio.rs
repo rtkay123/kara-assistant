@@ -41,7 +41,7 @@ pub fn visualise(
                     while buffer.len() > resolution {
                         let c_b = convert_buffer(
                             &buffer[0..resolution],
-                            22050,
+                            11025, // halved
                             config.loudness,
                             &frequency_scale_range,
                             config.smoothing_amount as u8,
