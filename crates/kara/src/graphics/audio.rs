@@ -1,7 +1,6 @@
 use std::{
     ops::Range,
     sync::{Arc, Mutex},
-    time::Duration,
 };
 
 use audio_utils::fft::{convert_buffer, merge_buffers};
@@ -16,10 +15,8 @@ pub enum Event {
 }
 
 pub fn visualise(
-    refresh_rate: u16,
     config: Arc<Mutex<Configuration>>,
     event_receiver: crossbeam_channel::Receiver<Event>,
-    event_sender: crossbeam_channel::Sender<Event>,
 ) {
     let frequency_scale_range = Range {
         start: 50,
@@ -85,13 +82,6 @@ pub fn visualise(
                     }
                 }
             }
-        }
-    });
-
-    tokio::spawn(async move {
-        loop {
-            tokio::time::sleep(Duration::from_millis(1000 / refresh_rate as u64)).await;
-            event_sender.send(Event::RequestRefresh).unwrap();
         }
     });
 }

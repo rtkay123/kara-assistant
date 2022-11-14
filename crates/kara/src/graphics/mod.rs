@@ -46,17 +46,12 @@ pub async fn run() -> anyhow::Result<()> {
     let config_file = Arc::new(Mutex::new(config_file));
 
     let device_name: Option<&str> = None;
-    let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name).unwrap();
+    let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name)?;
 
     _stream.start_stream()?;
 
     let (tx, rx) = crossbeam_channel::unbounded();
-    audio::visualise(
-        monitor_refresh_rate(&window),
-        Arc::clone(&config_file),
-        rx,
-        tx.clone(),
-    );
+    audio::visualise(Arc::clone(&config_file), rx);
     let inner_audio = tx.clone();
     tokio::task::spawn_blocking(move || {
         while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
@@ -138,198 +133,201 @@ pub async fn run() -> anyhow::Result<()> {
         program::State::new(controls, viewport.logical_size(), &mut renderer, &mut debug);
 
     event_loop.run(move |event, _, control_flow| {
-        match event {
-            Event::RedrawRequested(_) => {
-                if resized {
-                    let size = window.inner_size();
+        {
+            match event {
+                Event::RedrawRequested(_) => {
+                    if resized {
+                        let size = window.inner_size();
 
-                    viewport = Viewport::with_physical_size(
-                        Size::new(size.width, size.height),
-                        window.scale_factor(),
-                    );
-
-                    surface.configure(
-                        &device,
-                        &wgpu::SurfaceConfiguration {
-                            format,
-                            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-                            width: size.width,
-                            height: size.height,
-                            present_mode: wgpu::PresentMode::AutoVsync,
-                            alpha_mode: wgpu::CompositeAlphaMode::Auto,
-                        },
-                    );
-
-                    resized = false;
-                }
-
-                match surface.get_current_texture() {
-                    Ok(frame) => {
-                        let mut encoder =
-                            device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                                label: None,
-                            });
-
-                        let program = state.program();
-
-                        let (ntx, nrx) = crossbeam_channel::unbounded();
-                        tx.send(audio::Event::RequestData(ntx)).unwrap();
-
-                        let mut buffer = nrx.recv().unwrap();
-
-                        for i in 0..buffer.len() {
-                            buffer.insert(0, buffer[i * 2]);
-                        }
-
-                        let conf = config_file.lock().unwrap();
-                        let vis = match &conf.audio {
-                            Some(audio) => audio.visualiser.clone(),
-                            None => Visualiser::default(),
-                        };
-                        drop(conf);
-                        let (tr, tg, tb) =
-                            map_colour(&vis.top_colour, controls::ColourType::Foreground);
-                        let (br, bg, bb) =
-                            map_colour(&vis.bottom_colour, controls::ColourType::Foreground);
-
-                        let (top_color, bottom_color) = ([tr, tg, tb], [br, bg, bb]);
-
-                        let (vertices, indices) = vertex::prepare_data(
-                            buffer,
-                            1.5,
-                            top_color,
-                            bottom_color,
-                            [
-                                window.inner_size().width as f32 * 0.001,
-                                window.inner_size().height as f32 * 0.001,
-                            ],
-                            vis.radius,
+                        viewport = Viewport::with_physical_size(
+                            Size::new(size.width, size.height),
+                            window.scale_factor(),
                         );
 
-                        scene.update_buffers(&device, vertices, indices);
-
-                        let view = frame
-                            .texture
-                            .create_view(&wgpu::TextureViewDescriptor::default());
-
-                        {
-                            // We clear the frame
-                            let mut render_pass =
-                                scene.clear(&view, &mut encoder, program.background_colour());
-
-                            // Draw the scene
-                            scene.draw(&mut render_pass);
-                        }
-
-                        // And then iced on top
-                        renderer.with_primitives(|backend, primitive| {
-                            backend.present(
-                                &device,
-                                &mut staging_belt,
-                                &mut encoder,
-                                &view,
-                                primitive,
-                                &viewport,
-                                &debug.overlay(),
-                            );
-                        });
-
-                        // Then we submit the work
-                        staging_belt.finish();
-                        queue.submit(Some(encoder.finish()));
-                        frame.present();
-
-                        // Update the mouse cursor
-                        window.set_cursor_icon(iced_winit::conversion::mouse_interaction(
-                            state.mouse_interaction(),
-                        ));
-
-                        // And recall staging buffers
-                        staging_belt.recall();
-                    }
-                    Err(error) => match error {
-                        wgpu::SurfaceError::OutOfMemory => {
-                            panic!("Swapchain error: {}. Rendering cannot continue.", error)
-                        }
-                        _ => {
-                            // Try rendering again next frame.
-                            window.request_redraw();
-                        }
-                    },
-                }
-                window.request_redraw();
-            }
-            Event::WindowEvent {
-                ref event,
-                window_id,
-            } if window_id == window.id() => {
-                match event {
-                    WindowEvent::CloseRequested
-                    | WindowEvent::KeyboardInput {
-                        input:
-                            KeyboardInput {
-                                state: ElementState::Pressed,
-                                virtual_keycode: Some(VirtualKeyCode::Escape),
-                                ..
+                        surface.configure(
+                            &device,
+                            &wgpu::SurfaceConfiguration {
+                                format,
+                                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                                width: size.width,
+                                height: size.height,
+                                present_mode: wgpu::PresentMode::AutoVsync,
+                                alpha_mode: wgpu::CompositeAlphaMode::Auto,
                             },
-                        ..
-                    } => *control_flow = ControlFlow::Exit,
+                        );
 
-                    WindowEvent::CursorMoved { position, .. } => {
-                        cursor_position = *position;
+                        resized = false;
                     }
-                    WindowEvent::ModifiersChanged(new_modifiers) => {
-                        modifiers = *new_modifiers;
-                    }
-                    WindowEvent::Resized(_) => {
-                        resized = true;
-                    }
-                    _ => {}
                 }
+                Event::WindowEvent {
+                    ref event,
+                    window_id,
+                } if window_id == window.id() => {
+                    match event {
+                        WindowEvent::CloseRequested
+                        | WindowEvent::KeyboardInput {
+                            input:
+                                KeyboardInput {
+                                    state: ElementState::Pressed,
+                                    virtual_keycode: Some(VirtualKeyCode::Escape),
+                                    ..
+                                },
+                            ..
+                        } => *control_flow = ControlFlow::Exit,
 
-                // Map window event to iced event
-                if let Some(event) =
-                    iced_winit::conversion::window_event(event, window.scale_factor(), modifiers)
-                {
-                    state.queue_event(event);
+                        WindowEvent::CursorMoved { position, .. } => {
+                            cursor_position = *position;
+                        }
+                        WindowEvent::ModifiersChanged(new_modifiers) => {
+                            modifiers = *new_modifiers;
+                        }
+                        WindowEvent::Resized(_) => {
+                            resized = true;
+                        }
+                        _ => {}
+                    }
+
+                    // Map window event to iced event
+                    if let Some(event) = iced_winit::conversion::window_event(
+                        event,
+                        window.scale_factor(),
+                        modifiers,
+                    ) {
+                        state.queue_event(event);
+                    }
                 }
-            }
-            Event::MainEventsCleared => {
-                // If there are events pending
-                if !state.is_queue_empty() {
-                    // We update iced
-                    let _ = state.update(
-                        viewport.logical_size(),
-                        conversion::cursor_position(cursor_position, viewport.scale_factor()),
-                        &mut renderer,
-                        &iced_wgpu::Theme::Dark,
-                        &renderer::Style {
-                            text_color: Color::WHITE,
+                Event::MainEventsCleared => {
+                    // If there are events pending
+                    if !state.is_queue_empty() {
+                        // We update iced
+                        let _ = state.update(
+                            viewport.logical_size(),
+                            conversion::cursor_position(cursor_position, viewport.scale_factor()),
+                            &mut renderer,
+                            &iced_wgpu::Theme::Dark,
+                            &renderer::Style {
+                                text_color: Color::WHITE,
+                            },
+                            &mut clipboard,
+                            &mut debug,
+                        );
+
+                        // and request a redraw
+                        window.request_redraw();
+                    }
+
+                    match surface.get_current_texture() {
+                        Ok(frame) => {
+                            let mut encoder =
+                                device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                                    label: None,
+                                });
+
+                            let program = state.program();
+
+                            let (ntx, nrx) = crossbeam_channel::unbounded();
+                            tx.send(audio::Event::RequestData(ntx)).unwrap();
+
+                            let mut buffer = nrx.recv().unwrap();
+
+                            for i in 0..buffer.len() {
+                                buffer.insert(0, buffer[i * 2]);
+                            }
+
+                            let conf = config_file.lock().unwrap();
+                            let vis = match &conf.audio {
+                                Some(audio) => audio.visualiser.clone(),
+                                None => Visualiser::default(),
+                            };
+                            drop(conf);
+                            let (tr, tg, tb) =
+                                map_colour(&vis.top_colour, controls::ColourType::Foreground);
+                            let (br, bg, bb) =
+                                map_colour(&vis.bottom_colour, controls::ColourType::Foreground);
+
+                            let (top_color, bottom_color) = ([tr, tg, tb], [br, bg, bb]);
+
+                            let (vertices, indices) = vertex::prepare_data(
+                                buffer,
+                                1.5,
+                                top_color,
+                                bottom_color,
+                                [
+                                    window.inner_size().width as f32 * 0.001,
+                                    window.inner_size().height as f32 * 0.001,
+                                ],
+                                vis.radius,
+                            );
+
+                            scene.update_buffers(&device, vertices, indices);
+
+                            let view = frame
+                                .texture
+                                .create_view(&wgpu::TextureViewDescriptor::default());
+
+                            {
+                                // We clear the frame
+                                let mut render_pass =
+                                    scene.clear(&view, &mut encoder, program.background_colour());
+
+                                // Draw the scene
+                                scene.draw(&mut render_pass);
+                            }
+
+                            // And then iced on top
+                            renderer.with_primitives(|backend, primitive| {
+                                backend.present(
+                                    &device,
+                                    &mut staging_belt,
+                                    &mut encoder,
+                                    &view,
+                                    primitive,
+                                    &viewport,
+                                    &debug.overlay(),
+                                );
+                            });
+
+                            // Then we submit the work
+                            staging_belt.finish();
+                            queue.submit(Some(encoder.finish()));
+                            frame.present();
+
+                            // Update the mouse cursor
+                            window.set_cursor_icon(iced_winit::conversion::mouse_interaction(
+                                state.mouse_interaction(),
+                            ));
+
+                            // And recall staging buffers
+                            staging_belt.recall();
+                        }
+                        Err(error) => match error {
+                            wgpu::SurfaceError::OutOfMemory => {
+                                panic!("Swapchain error: {}. Rendering cannot continue.", error)
+                            }
+                            _ => {
+                                // Try rendering again next frame.
+                                window.request_redraw();
+                            }
                         },
-                        &mut clipboard,
-                        &mut debug,
-                    );
-
-                    // and request a redraw
-                    window.request_redraw();
+                    }
+                    tx.send(audio::Event::RequestRefresh).unwrap();
                 }
-            }
-            Event::UserEvent(event) => {
-                if let KaraEvent::ReloadConfiguration(new_config) = &event {
-                    let mut config = config_file.lock().unwrap();
-                    *config = new_config.clone();
-                    window.set_title(&new_config.window.title);
-                    window.set_decorations(new_config.window.decorations);
-                    window.request_redraw();
+                Event::UserEvent(event) => {
+                    if let KaraEvent::ReloadConfiguration(new_config) = &event {
+                        let mut config = config_file.lock().unwrap();
+                        *config = new_config.clone();
+                        window.set_title(&new_config.window.title);
+                        window.set_decorations(new_config.window.decorations);
+                    }
+                    state.queue_message(event);
                 }
-                state.queue_message(event);
+                _ => {}
             }
-            _ => {}
         }
     });
 }
 
-fn monitor_refresh_rate(window: &Window) -> u16 {
+fn _monitor_refresh_rate(window: &Window) -> u16 {
     let mut monitor: Vec<_> = window
         .available_monitors()
         .into_iter()
