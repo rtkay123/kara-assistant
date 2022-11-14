@@ -239,6 +239,7 @@ pub async fn run() -> anyhow::Result<()> {
                                 Some(audio) => audio.visualiser.clone(),
                                 None => Visualiser::default(),
                             };
+                            let stroke = vis.stroke;
                             drop(conf);
                             let (tr, tg, tb) =
                                 map_colour(&vis.top_colour, controls::ColourType::Foreground);
@@ -249,7 +250,7 @@ pub async fn run() -> anyhow::Result<()> {
 
                             let (vertices, indices) = vertex::prepare_data(
                                 buffer,
-                                1.5,
+                                stroke,
                                 top_color,
                                 bottom_color,
                                 [

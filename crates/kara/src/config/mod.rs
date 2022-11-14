@@ -118,6 +118,13 @@ pub struct Visualiser {
 
     #[serde(default = "vis_radius")]
     pub radius: f32,
+
+    #[serde(default = "stroke")]
+    pub stroke: f32,
+}
+
+fn stroke() -> f32 {
+    1.5
 }
 
 fn vis_radius() -> f32 {
@@ -136,6 +143,7 @@ impl Default for Visualiser {
             top_colour: vis_top(),
             bottom_colour: vis_bottom(),
             radius: vis_radius(),
+            stroke: stroke(),
         }
     }
 }

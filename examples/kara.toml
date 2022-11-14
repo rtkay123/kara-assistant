@@ -10,6 +10,7 @@
 # sample-rate = 44100
 # 
 #   [audio.visualiser]
+#   stroke = 1.0
 #   radius = 0.2
 #   loudness = 1
 #   buffering = 5
