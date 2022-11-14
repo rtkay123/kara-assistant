@@ -10,5 +10,6 @@ crossbeam-channel = "0.5.6"
 gag = "1.0.0"
 serde = { version = "1.0.147", features = ["derive"] }
 thiserror = "1.0.37"
+tokio = { version = "1.21.2", features = ["sync"] }
 tracing = "0.1.37"
 vosk = "0.2.0"

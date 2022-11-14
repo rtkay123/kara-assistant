@@ -8,6 +8,7 @@ pub use audio::Event as AudioEvent;
 
 #[cfg(feature = "graphical")]
 pub use audio::visualise;
+use tracing::error;
 
 use std::sync::{Arc, Mutex};
 
@@ -40,7 +41,7 @@ pub async fn run() -> anyhow::Result<()> {
     let event_loop_proxy = Arc::new(Mutex::new(event_loop.create_proxy()));
 
     let config_file = read_config_file(Arc::clone(&event_loop_proxy));
-    let (device_name, _sample_rate) = get_audio_device_info(&config_file);
+    let (device_name, sample_rate) = get_audio_device_info(&config_file);
 
     let window_settings = &config_file.window;
 
@@ -57,11 +58,12 @@ pub async fn run() -> anyhow::Result<()> {
     let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name)?;
 
     _stream.start_stream()?;
-
-    let (tx, rx) = crossbeam_channel::unbounded();
-
-    // send to visualiser
-    start_listening(stream_opts, tx.clone(), Arc::clone(&config_file), rx);
+    let vis_handle = start_listening(
+        stream_opts,
+        Arc::clone(&config_file),
+        sample_rate,
+        Arc::clone(&event_loop_proxy),
+    );
 
     let physical_size = window.inner_size();
 
@@ -229,80 +231,89 @@ pub async fn run() -> anyhow::Result<()> {
                             let program = state.program();
 
                             let (ntx, nrx) = crossbeam_channel::unbounded();
-                            tx.send(audio::Event::RequestData(ntx)).unwrap();
+                            if vis_handle.send(audio::Event::RequestData(ntx)).is_err() {
+                                error!("could not request visualiser data");
+                            } else if let Ok(mut buffer) = nrx.recv() {
+                                for i in 0..buffer.len() {
+                                    buffer.insert(0, buffer[i * 2]);
+                                }
 
-                            let mut buffer = nrx.recv().unwrap();
-
-                            for i in 0..buffer.len() {
-                                buffer.insert(0, buffer[i * 2]);
-                            }
-
-                            let conf = config_file.lock().unwrap();
-                            let vis = match &conf.audio {
-                                Some(audio) => audio.visualiser.clone(),
-                                None => Visualiser::default(),
-                            };
-                            let stroke = vis.stroke;
-                            drop(conf);
-                            let (tr, tg, tb) =
-                                map_colour(&vis.top_colour, controls::ColourType::Foreground);
-                            let (br, bg, bb) =
-                                map_colour(&vis.bottom_colour, controls::ColourType::Foreground);
-
-                            let (top_color, bottom_color) = ([tr, tg, tb], [br, bg, bb]);
-
-                            let (vertices, indices) = vertex::prepare_data(
-                                buffer,
-                                stroke,
-                                top_color,
-                                bottom_color,
-                                [
-                                    window.inner_size().width as f32 * 0.001,
-                                    window.inner_size().height as f32 * 0.001,
-                                ],
-                                vis.radius,
-                            );
-
-                            scene.update_buffers(&device, vertices, indices);
-
-                            let view = frame
-                                .texture
-                                .create_view(&wgpu::TextureViewDescriptor::default());
-
-                            {
-                                // We clear the frame
-                                let mut render_pass =
-                                    scene.clear(&view, &mut encoder, program.background_colour());
-
-                                // Draw the scene
-                                scene.draw(&mut render_pass);
-                            }
-
-                            // And then iced on top
-                            renderer.with_primitives(|backend, primitive| {
-                                backend.present(
-                                    &device,
-                                    &mut staging_belt,
-                                    &mut encoder,
-                                    &view,
-                                    primitive,
-                                    &viewport,
-                                    &debug.overlay(),
+                                let conf = config_file
+                                    .lock()
+                                    .expect("could not acquire config file lock");
+                                let vis = match &conf.audio {
+                                    Some(audio) => audio.visualiser.clone(),
+                                    None => Visualiser::default(),
+                                };
+                                let stroke = vis.stroke;
+                                drop(conf);
+                                let (tr, tg, tb) =
+                                    map_colour(&vis.top_colour, controls::ColourType::Foreground);
+                                let (br, bg, bb) = map_colour(
+                                    &vis.bottom_colour,
+                                    controls::ColourType::Foreground,
                                 );
-                            });
 
-                            // Then we submit the work
-                            staging_belt.finish();
-                            queue.submit(Some(encoder.finish()));
-                            frame.present();
+                                let (top_color, bottom_color) = ([tr, tg, tb], [br, bg, bb]);
 
-                            // Update the mouse cursor
-                            window.set_cursor_icon(iced_winit::conversion::mouse_interaction(
-                                state.mouse_interaction(),
-                            ));
+                                let (vertices, indices) = vertex::prepare_data(
+                                    buffer,
+                                    stroke,
+                                    top_color,
+                                    bottom_color,
+                                    [
+                                        window.inner_size().width as f32 * 0.001,
+                                        window.inner_size().height as f32 * 0.001,
+                                    ],
+                                    vis.radius,
+                                );
 
-                            // And recall staging buffers
-                            staging_belt.recall();
+                                scene.update_buffers(&device, vertices, indices);
+
+                                let view = frame
+                                    .texture
+                                    .create_view(&wgpu::TextureViewDescriptor::default());
+
+                                {
+                                    // We clear the frame
+                                    let mut render_pass = scene.clear(
+                                        &view,
+                                        &mut encoder,
+                                        program.background_colour(),
+                                    );
+
+                                    // Draw the scene
+                                    scene.draw(&mut render_pass);
+                                }
+
+                                // And then iced on top
+                                renderer.with_primitives(|backend, primitive| {
+                                    backend.present(
+                                        &device,
+                                        &mut staging_belt,
+                                        &mut encoder,
+                                        &view,
+                                        primitive,
+                                        &viewport,
+                                        &debug.overlay(),
+                                    );
+                                });
+
+                                // Then we submit the work
+                                staging_belt.finish();
+                                queue.submit(Some(encoder.finish()));
+                                frame.present();
+
+                                // Update the mouse cursor
+                                window.set_cursor_icon(iced_winit::conversion::mouse_interaction(
+                                    state.mouse_interaction(),
+                                ));
+
+                                // And recall staging buffers
+                                staging_belt.recall();
+                            } else {
+                                error!("could not receive visual data");
+                            }
                         }
                         Err(error) => match error {
                             wgpu::SurfaceError::OutOfMemory => {
@@ -314,14 +325,26 @@ pub async fn run() -> anyhow::Result<()> {
                             }
                         },
                     }
-                    tx.send(audio::Event::RequestRefresh).unwrap();
+                    if vis_handle.send(audio::Event::RequestRefresh).is_err() {
+                        error!("could not request visualiser refresh: SendError")
+                    }
                 }
                 Event::UserEvent(event) => {
-                    if let KaraEvent::ReloadConfiguration(new_config) = &event {
-                        let mut config = config_file.lock().unwrap();
-                        *config = new_config.clone();
-                        window.set_title(&new_config.window.title);
-                        window.set_decorations(new_config.window.decorations);
+                    match &event {
+                        KaraEvent::Close => todo!(),
+                        KaraEvent::ReloadConfiguration(new_config) => {
+                            let mut config =
+                                config_file.lock().expect("could not acquire config lock");
+                            *config = new_config.clone();
+                            window.set_title(&new_config.window.title);
+                            window.set_decorations(new_config.window.decorations);
+                        }
+                        KaraEvent::ReadingSpeech(s) => {
+                            println!("reading speech: {s}");
+                        }
+                        KaraEvent::FinalisedSpeech(s) => {
+                            println!("FINAL speech: {s}");
+                        }
                     }
                     state.queue_message(event);
                 }
