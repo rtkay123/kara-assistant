@@ -80,7 +80,7 @@ impl Program for Controls {
                 self.padding = config.window.padding;
                 self.font_size = config.window.font_size;
             }
-            KaraEvent::Close => {}
+            KaraEvent::ReadingSpeech(text) | KaraEvent::FinalisedSpeech(text) => self.text = text,
             _ => {}
         }
         Command::none()

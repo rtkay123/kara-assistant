@@ -336,21 +336,11 @@ pub async fn run() -> anyhow::Result<()> {
                     }
                 }
                 Event::UserEvent(event) => {
-                    match &event {
-                        KaraEvent::Close => todo!(),
-                        KaraEvent::ReloadConfiguration(new_config) => {
-                            let mut config =
-                                config_file.lock().expect("could not acquire config lock");
-                            *config = new_config.clone();
-                            window.set_title(&new_config.window.title);
-                            window.set_decorations(new_config.window.decorations);
-                        }
-                        KaraEvent::ReadingSpeech(s) => {
-                            println!("reading speech: {s}");
-                        }
-                        KaraEvent::FinalisedSpeech(s) => {
-                            println!("FINAL speech: {s}");
-                        }
+                    if let KaraEvent::ReloadConfiguration(new_config) = &event {
+                        let mut config = config_file.lock().expect("could not acquire config lock");
+                        *config = new_config.clone();
+                        window.set_title(&new_config.window.title);
+                        window.set_decorations(new_config.window.decorations);
                     }
                     state.queue_message(event);
                 }
