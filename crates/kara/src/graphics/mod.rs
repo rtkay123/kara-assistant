@@ -25,6 +25,7 @@ use iced_winit::{
 };
 use tracing::trace;
 
+use crate::audio::create_asr_sources;
 use crate::audio::get_audio_device_info;
 use crate::{
     audio::start_listening,
@@ -57,12 +58,17 @@ pub async fn run() -> anyhow::Result<()> {
 
     let (stream_opts, _stream) = mic_rec::StreamOpts::new(device_name)?;
 
+    let speech_recognisers = create_asr_sources(
+        Arc::clone(&config_file),
+        sample_rate.unwrap_or_else(|| stream_opts.sample_rate()),
+    );
+
     _stream.start_stream()?;
     let vis_handle = start_listening(
         stream_opts,
         Arc::clone(&config_file),
-        sample_rate,
         Arc::clone(&event_loop_proxy),
+        speech_recognisers,
     );
 
     let physical_size = window.inner_size();

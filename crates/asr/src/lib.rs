@@ -1,6 +1,6 @@
 pub mod sources;
 
-pub trait Transcibe {
+pub trait Transcibe: Send {
     fn transcribe(&self, stream: &[i16], result_sender: &Sender<TranscriptionResult>)
         -> Result<()>;
 }
@@ -11,8 +11,11 @@ pub struct TranscriptionResult {
 }
 
 impl TranscriptionResult {
-    fn new(text: String, finalised: bool) -> Self {
-        Self { text, finalised }
+    fn new(text: &str, finalised: bool) -> Self {
+        Self {
+            text: text.to_string(),
+            finalised,
+        }
     }
 
     pub fn transcription(&self) -> &str {

@@ -1,6 +1,6 @@
 pub mod kara;
 
-use std::path::PathBuf;
+use std::{collections::VecDeque, path::PathBuf};
 
 use crossbeam_channel::Sender;
 use serde::{Deserialize, Serialize};
@@ -50,14 +50,23 @@ impl ToString for Source {
     }
 }
 
+#[derive(Default)]
 pub struct SpeechRecognisers {
-    sources: Vec<Box<dyn Transcibe>>,
+    sources: VecDeque<Box<dyn Transcibe>>,
 }
 
 impl SpeechRecognisers {
-    pub fn new(sources: Vec<Box<dyn Transcibe>>) -> Self {
+    pub fn new() -> Self {
         trace!("creating speech recognition backends");
-        Self { sources }
+        Self::default()
+    }
+
+    pub fn add(&mut self, source: Box<dyn Transcibe>) {
+        self.sources.push_back(source);
+    }
+
+    pub fn add_primary(&mut self, source: Box<dyn Transcibe>) {
+        self.sources.push_front(source);
     }
 
     pub fn speech_to_text(&self, feed: &[i16], result_sender: &Sender<TranscriptionResult>) {

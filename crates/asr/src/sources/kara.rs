@@ -23,19 +23,16 @@ impl Transcibe for LocalRecogniser {
             vosk::DecodingState::Finalized => {
                 if let Some(result) = recogniser.result().single() {
                     result_sender
-                        .send(TranscriptionResult {
-                            text: result.text.to_string(),
-                            finalised: true,
-                        })
+                        .send(TranscriptionResult::new(result.text, true))
                         .map_err(|f| TranscriptionError::SendError(f.to_string()))?;
                 }
             }
             vosk::DecodingState::Running => {
                 result_sender
-                    .send(TranscriptionResult {
-                        text: recogniser.partial_result().partial.to_string(),
-                        finalised: false,
-                    })
+                    .send(TranscriptionResult::new(
+                        recogniser.partial_result().partial,
+                        false,
+                    ))
                     .map_err(|f| TranscriptionError::SendError(f.to_string()))?;
             }
             vosk::DecodingState::Failed => {
