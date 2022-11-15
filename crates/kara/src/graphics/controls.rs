@@ -1,13 +1,12 @@
 use std::str::FromStr;
 
 use iced_wgpu::Renderer;
-use iced_winit::widget::{Column, Container, Text};
+use iced_winit::widget::{progress_bar, Column, Container, ProgressBar, Text};
 use iced_winit::{alignment, Color, Command, Element, Length, Program};
 use palette::Srgb;
 use tracing::error;
 
-use crate::config::Configuration;
-use crate::events::KaraEvent;
+use crate::{config::Configuration, events::KaraEvent};
 
 pub struct Controls {
     background_color: Color,
@@ -15,6 +14,7 @@ pub struct Controls {
     padding: u16,
     text: String,
     font_size: u16,
+    progress_bar: f32,
 }
 
 impl Controls {
@@ -39,6 +39,7 @@ impl Controls {
             },
             padding: config.window.padding,
             font_size: config.window.font_size,
+            progress_bar: 50.0,
         }
     }
 
@@ -81,6 +82,10 @@ impl Program for Controls {
                 self.font_size = config.window.font_size;
             }
             KaraEvent::ReadingSpeech(text) | KaraEvent::FinalisedSpeech(text) => self.text = text,
+            KaraEvent::UpdateProgressBar(new_progress) => {
+                println!("{}", new_progress);
+                self.progress_bar = new_progress;
+            }
             _ => {}
         }
         Command::none()
@@ -92,13 +97,17 @@ impl Program for Controls {
                 .style(self.foreground_colour())
                 .size(self.font_size),
         );
-        Container::new(content)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(alignment::Horizontal::Center)
-            .align_y(alignment::Vertical::Bottom)
-            .padding(self.padding)
-            .into()
+        Container::new(if self.progress_bar < 100.0 {
+            content.push(progress_bar(0.0..=100.0, self.progress_bar))
+        } else {
+            content
+        })
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .align_x(alignment::Horizontal::Center)
+        .align_y(alignment::Vertical::Bottom)
+        .padding(self.padding)
+        .into()
     }
 }
 

@@ -4,7 +4,8 @@ use crate::config::Configuration;
 #[non_exhaustive]
 pub enum KaraEvent {
     Close,
-    ReloadConfiguration(Configuration),
+    ReloadConfiguration(Box<Configuration>),
     ReadingSpeech(String),
     FinalisedSpeech(String),
+    UpdateProgressBar(f32),
 }
