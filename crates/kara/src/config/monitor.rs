@@ -66,9 +66,9 @@ fn async_watch(
                             match read_file(&current_path) {
                                 Ok(Ok(config)) => {
                                     let proxy = event_loop_proxy.lock().unwrap();
-                                    if let Err(e) =
-                                        proxy.send_event(KaraEvent::ReloadConfiguration(config))
-                                    {
+                                    if let Err(e) = proxy.send_event(
+                                        KaraEvent::ReloadConfiguration(Box::new(config)),
+                                    ) {
                                         error!("send event error {:?}", e);
                                     } else {
                                         trace!("configuration reloaded");

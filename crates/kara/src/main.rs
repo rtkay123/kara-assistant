@@ -1,4 +1,6 @@
 mod audio;
+#[cfg(feature = "commandline")]
+mod cli;
 mod config;
 mod events;
 #[cfg(feature = "graphical")]
@@ -20,14 +22,13 @@ async fn start() {
             graphics::run().await.unwrap();
         }
         config::cli::StartupMode::Cli => {
-            println!("starting cli");
-            std::process::exit(0);
+            cli::run().await.unwrap();
         }
     }
 
     if cfg!(feature = "graphical") {
         graphics::run().await.unwrap();
     } else if cfg!(feature = "commandline") {
-        println!("starting cli");
+        cli::run().await.unwrap();
     }
 }

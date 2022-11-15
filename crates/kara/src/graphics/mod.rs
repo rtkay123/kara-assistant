@@ -25,10 +25,8 @@ use iced_winit::{
 };
 use tracing::trace;
 
-use crate::audio::create_asr_sources;
-use crate::audio::get_audio_device_info;
 use crate::{
-    audio::start_listening,
+    audio::{create_asr_sources, get_audio_device_info, start_listening},
     config::{read_config_file, Visualiser},
     events::KaraEvent,
     graphics::controls::map_colour,
@@ -41,7 +39,8 @@ pub async fn run() -> anyhow::Result<()> {
 
     let event_loop_proxy = Arc::new(Mutex::new(event_loop.create_proxy()));
 
-    let config_file = read_config_file(Arc::clone(&event_loop_proxy));
+    crate::config::monitor::monitor_config(Arc::clone(&event_loop_proxy));
+    let config_file = read_config_file();
     let (device_name, sample_rate) = get_audio_device_info(&config_file);
 
     let window_settings = &config_file.window;
@@ -61,6 +60,7 @@ pub async fn run() -> anyhow::Result<()> {
     let speech_recognisers = create_asr_sources(
         Arc::clone(&config_file),
         sample_rate.unwrap_or_else(|| stream_opts.sample_rate()),
+        Arc::clone(&event_loop_proxy),
     );
 
     _stream.start_stream()?;
@@ -338,7 +338,7 @@ pub async fn run() -> anyhow::Result<()> {
                 Event::UserEvent(event) => {
                     if let KaraEvent::ReloadConfiguration(new_config) = &event {
                         let mut config = config_file.lock().expect("could not acquire config lock");
-                        *config = new_config.clone();
+                        *config = *new_config.clone();
                         window.set_title(&new_config.window.title);
                         window.set_decorations(new_config.window.decorations);
                     }

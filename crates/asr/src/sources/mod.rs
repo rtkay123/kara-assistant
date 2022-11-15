@@ -6,7 +6,7 @@ use crossbeam_channel::Sender;
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 
-use crate::{Transcibe, TranscriptionResult};
+use crate::{Transcibe, TranscriptionError, TranscriptionResult};
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -69,7 +69,15 @@ impl SpeechRecognisers {
         self.sources.push_front(source);
     }
 
-    pub fn speech_to_text(&self, feed: &[i16], result_sender: &Sender<TranscriptionResult>) {
+    pub fn valid(&self) -> bool {
+        !self.sources.is_empty()
+    }
+
+    pub fn speech_to_text(
+        &self,
+        feed: &[i16],
+        result_sender: &Sender<TranscriptionResult>,
+    ) -> Result<(), TranscriptionError> {
         for i in self.sources.iter() {
             if let Err(e) = i.transcribe(feed, result_sender) {
                 error!("{}, trying fallback", e.to_string());
@@ -78,5 +86,6 @@ impl SpeechRecognisers {
                 break;
             }
         }
+        Ok(())
     }
 }

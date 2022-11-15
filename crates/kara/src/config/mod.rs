@@ -1,22 +1,12 @@
 pub mod monitor;
-use std::{
-    path::Path,
-    sync::{Arc, Mutex},
-};
+use std::path::Path;
 
 use asr::sources::Source;
 use clap::Parser;
 
-#[cfg(feature = "graphical")]
-use iced_winit::winit::event_loop::EventLoopProxy;
 use serde::{Deserialize, Deserializer, Serialize};
 
-use crate::events::KaraEvent;
-
 use self::cli::Args;
-
-#[cfg(feature = "graphical")]
-use self::monitor::monitor_config;
 
 pub mod cli;
 
@@ -264,9 +254,7 @@ fn default_window() -> Window {
     Window::default()
 }
 
-#[cfg(feature = "graphical")]
-pub fn read_config_file(event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>) -> Configuration {
-    monitor_config(event_loop_proxy);
+pub fn read_config_file() -> Configuration {
     match dirs::config_dir() {
         Some(mut base) => {
             let mut nested = base.clone();
