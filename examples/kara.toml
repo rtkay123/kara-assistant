@@ -31,6 +31,7 @@
 #   [[speech-recognition.sources]]
 #   source = "kara"
 #   model-path = ""
+#   fallback-url = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
 # 
 #   #[[speech-recognition.sources]]
 #   #source = "ibm-watson"

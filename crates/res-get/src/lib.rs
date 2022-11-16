@@ -9,10 +9,10 @@ use reqwest::{
     Client, StatusCode,
 };
 use tokio::{
-    fs::{File, OpenOptions},
+    fs::{create_dir_all, File, OpenOptions},
     io::{AsyncSeekExt, AsyncWriteExt},
 };
-use tracing::error;
+use tracing::{error, trace};
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -48,6 +48,7 @@ impl ResGet {
     }
 
     pub async fn get_asr_model(&self) -> Result<()> {
+        create_dir_all(&self.vosk_model.destination).await?;
         let mut path_buf = self.vosk_model.destination.clone();
         let head = self.client.head(&self.vosk_model.url).send().await?;
         let content_length = head.headers().get(CONTENT_LENGTH);
@@ -75,10 +76,6 @@ impl ResGet {
         outfile.seek(tokio::io::SeekFrom::Start(file_size)).await?;
         let mut downloaded = file_size;
 
-        let c: u64 = content_length
-            .ok_or("no content length available")?
-            .to_str()?
-            .parse()?;
         let url = &self.vosk_model.url;
 
         match content_length {
@@ -107,6 +104,12 @@ impl ResGet {
                     let content = head.bytes().await?;
                     let mut content = content.as_ref();
                     tokio::io::copy(&mut content, &mut outfile).await?;
+                    extract_file(
+                        file,
+                        path_buf.parent().ok_or("no parent")?,
+                        &path_buf.display().to_string(),
+                    )
+                    .await?;
                 } else {
                     // redownload file
                     download_no_resume(
@@ -163,6 +166,7 @@ async fn download_no_resume(
         let progress = downloaded as f32 / total_size as f32 * 100.0;
         progress_sender.send(progress)?;
     }
+    extract_file(file, path_buf.parent().ok_or("no parent")?, file_name).await?;
     Ok(())
 }
 
@@ -206,4 +210,23 @@ impl Iterator for PartialRangeIter {
     }
 }
 
-pub use crossbeam_channel::Sender as DownloadProgress;
+async fn extract_file(file: File, parent: &Path, file_name: &str) -> Result<()> {
+    use gag::Gag;
+    let file = file.into_std().await;
+    let _print_gag = Gag::stderr()?;
+    let file_name = PathBuf::from(file_name);
+    let file_name = file_name.file_name().ok_or("could not get file name")?;
+    let file_name = file_name.to_string_lossy().to_string();
+    let parent_str = parent.to_string_lossy().to_string();
+    trace!(
+        file_name = file_name,
+        parent_dir = parent_str,
+        "extracting file"
+    );
+    let mut archive = zip::ZipArchive::new(file)?;
+
+    tokio::fs::create_dir_all(parent).await?;
+
+    archive.extract(parent)?;
+    Ok(())
+}

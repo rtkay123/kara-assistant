@@ -1,6 +1,9 @@
 pub mod asr;
 use crate::{
-    audio::asr::get_remote_model, config::Configuration, events::KaraEvent, graphics::AudioEvent,
+    audio::asr::{get_remote_model, try_default_location},
+    config::Configuration,
+    events::KaraEvent,
+    graphics::AudioEvent,
 };
 use ::asr::{
     sources::{kara::LocalRecogniser, Source, SpeechRecognisers},
@@ -16,7 +19,7 @@ pub fn create_asr_sources(
     config: Arc<Mutex<Configuration>>,
     sample_rate: f32,
     event_loop: Arc<Mutex<EventLoopProxy<KaraEvent>>>,
-) -> (Receiver<SpeechRecognisers>, Receiver<Box<dyn Transcibe>>) {
+) -> (Receiver<SpeechRecognisers>, Receiver<LocalRecogniser>) {
     let (tx, rx) = crossbeam_channel::bounded(1);
 
     let (tx_local_model, rx_local_model) = crossbeam_channel::bounded(1);
@@ -27,21 +30,33 @@ pub fn create_asr_sources(
         for i in &config_file.speech_recognition.sources {
             debug!(source = i.to_string());
             let backend: Option<Box<dyn Transcibe>> = match &i {
-                Source::Kara { model_path } => {
-                    match LocalRecogniser::new(model_path, sample_rate) {
-                        Ok(model) => Some(Box::new(model)),
-                        Err(e) => {
-                            error!("{e}");
-                            if i.to_string() == config_file.speech_recognition.default_source {
-                                tokio::spawn(get_remote_model(
-                                    Arc::clone(&event_loop),
-                                    tx_local_model.clone(),
-                                ));
+                Source::Kara {
+                    model_path,
+                    fallback_url,
+                } => match LocalRecogniser::new(&model_path, sample_rate) {
+                    Ok(model) => Some(Box::new(model)),
+                    Err(e) => {
+                        error!("{e}");
+                        if i.to_string() == config_file.speech_recognition.default_source {
+                            match try_default_location(&model_path, sample_rate) {
+                                Ok(model) => {
+                                    let _ = tx_local_model.send(model);
+                                }
+                                Err(e) => {
+                                    error!("{e}");
+                                    tokio::spawn(get_remote_model(
+                                        Arc::clone(&event_loop),
+                                        tx_local_model.clone(),
+                                        fallback_url.clone(),
+                                        model_path.clone(),
+                                        sample_rate,
+                                    ));
+                                }
                             }
-                            None
                         }
+                        None
                     }
-                }
+                },
                 Source::IBMWatson {
                     api_key,
                     service_url,
@@ -72,7 +87,7 @@ pub fn start_listening(
     stream_opts: StreamOpts,
     config: Arc<Mutex<Configuration>>,
     event_loop: Arc<Mutex<EventLoopProxy<KaraEvent>>>,
-    speech_recognisers: (Receiver<SpeechRecognisers>, Receiver<Box<dyn Transcibe>>),
+    speech_recognisers: (Receiver<SpeechRecognisers>, Receiver<LocalRecogniser>),
 ) -> Sender<AudioEvent> {
     let (visualiser_sender, event_receiver) = crossbeam_channel::unbounded();
     let visualiser_handle = visualiser_sender.clone();
@@ -94,21 +109,21 @@ pub fn start_listening(
                     audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
                 if recognisers.valid() {
                     trace!("valid");
-                    recognisers.speech_to_text(&_transciption_data, &tx);
+                    if let Err(e) = recognisers.speech_to_text(&_transciption_data, &tx) {
+                        error!("{e}");
+                    }
                     if let Ok(ev) = rx.recv() {
                         let proxy = event_loop.lock().unwrap();
-                        proxy
-                            .send_event(if ev.finalised() {
-                                KaraEvent::FinalisedSpeech(ev.transcription().to_string())
-                            } else {
-                                KaraEvent::ReadingSpeech(ev.transcription().to_string())
-                            })
-                            .unwrap();
+                        let _ = proxy.send_event(if ev.finalised() {
+                            KaraEvent::FinalisedSpeech(ev.transcription().to_string())
+                        } else {
+                            KaraEvent::ReadingSpeech(ev.transcription().to_string())
+                        });
                     }
                 } else {
                     trace!("not valid");
                     if let Ok(rec) = local_recogniser.try_recv() {
-                        recognisers.add_primary(rec);
+                        recognisers.add_primary(Box::new(rec));
                     }
                 }
                 let _ = visualiser_sender.send(AudioEvent::SendData(audio_buf));

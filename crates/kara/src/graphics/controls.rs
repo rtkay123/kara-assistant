@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use iced_wgpu::Renderer;
-use iced_winit::widget::{progress_bar, Column, Container, ProgressBar, Text};
+use iced_winit::widget::{progress_bar, Column, Container, Text};
 use iced_winit::{alignment, Color, Command, Element, Length, Program};
 use palette::Srgb;
 use tracing::error;
@@ -39,7 +39,7 @@ impl Controls {
             },
             padding: config.window.padding,
             font_size: config.window.font_size,
-            progress_bar: 50.0,
+            progress_bar: 100.0,
         }
     }
 

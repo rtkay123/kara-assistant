@@ -15,6 +15,9 @@ pub enum Source {
     Kara {
         #[serde(rename = "model-path")]
         model_path: PathBuf,
+
+        #[serde(rename = "fallback-url")]
+        fallback_url: String,
     },
 
     #[serde(rename = "ibm-watson")]
@@ -28,6 +31,11 @@ pub enum Source {
         service_url: String,
     },
 }
+
+fn vosk_link() -> String {
+    String::from("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip")
+}
+
 fn empty_string() -> String {
     String::default()
 }
@@ -36,6 +44,7 @@ impl Default for Source {
     fn default() -> Self {
         Self::Kara {
             model_path: PathBuf::new(),
+            fallback_url: vosk_link(),
         }
     }
 }
