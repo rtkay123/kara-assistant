@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::{
     cmp::min,
     path::{Path, PathBuf},
@@ -49,6 +52,7 @@ impl ResGet {
     }
 
     pub async fn get_asr_model(&self) -> Result<()> {
+        let buffer_size = 10240;
         trace!("starting model download");
         create_dir_all(&self.vosk_model.destination).await?;
         let mut path_buf = self.vosk_model.destination.clone();
@@ -87,7 +91,8 @@ impl ResGet {
                 if accept_range.is_some() {
                     // resume download if file exists
                     // check file size
-                    for range in PartialRangeIter::new(file_size, content_length - 1, 10240)? {
+                    for range in PartialRangeIter::new(file_size, content_length - 1, buffer_size)?
+                    {
                         let response = self.client.get(url).header(RANGE, range).send().await?;
                         let status = response.status();
                         if !(status == StatusCode::OK || status == StatusCode::PARTIAL_CONTENT) {
@@ -97,7 +102,7 @@ impl ResGet {
                             let mut content = content.as_ref();
                             tokio::io::copy(&mut content, &mut outfile).await?;
                         }
-                        let new = min(downloaded + 10240, content_length);
+                        let new = min(downloaded + buffer_size as u64, content_length);
                         downloaded = new;
                         let progress = downloaded as f32 / content_length as f32 * 100.0;
                         self.progress_sender.send(progress)?;
@@ -287,6 +292,7 @@ async fn extract_file(file: File, base_parent: &Path, file_name: &str) -> Result
         }
     }
 
+    trace!("cleaning up artifacts");
     tokio::fs::remove_file(file_name).await?;
 
     let path = base_parent.display().to_string();
