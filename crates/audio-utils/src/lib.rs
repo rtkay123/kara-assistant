@@ -5,12 +5,15 @@ use dasp::{sample::ToSample, Sample};
 
 pub fn convert_to_mono(input_data: &[i16], channels: u16) -> Vec<i16> {
     if channels != 1 {
-        let mut result = Vec::with_capacity(input_data.len() / 2);
-        result.extend(
-            input_data
-                .chunks_exact(2)
-                .map(|chunk| chunk[0] / 2 + chunk[1] / 2),
-        );
+        let mut result = Vec::with_capacity(input_data.len() / channels as usize);
+        result.extend(input_data.chunks_exact(channels.into()).map(|chunk| {
+            // chunk[0] / 2 + chunk[1] / 2;
+            let mut ret_val = 0;
+            for i in 0..channels {
+                ret_val += chunk[i as usize] / channels as i16;
+            }
+            ret_val
+        }));
         result
     } else {
         input_data.to_owned()

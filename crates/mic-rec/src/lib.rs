@@ -6,7 +6,7 @@ use cpal::{
     traits::{DeviceTrait, HostTrait, StreamTrait},
     SampleFormat,
 };
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 
 use crate::errors::StreamOptsError;
 
@@ -81,7 +81,7 @@ impl StreamOpts {
             ),
         }?;
 
-        trace!("stream created");
+        info!("stream is ready");
         Ok((
             StreamOpts {
                 sample_rate: sample_rate as f32,

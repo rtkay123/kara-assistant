@@ -2,6 +2,8 @@ use std::ops::Range;
 
 use rustfft::{num_complex::Complex, FftPlanner};
 
+use crate::window::hann_window;
+
 /// puts buffer into FFT alogrithm and applies filters and modifiers to it
 pub fn convert_buffer(
     input_buffer: &[f32],
@@ -51,13 +53,14 @@ pub fn convert_buffer(
 }
 
 fn apodize(buffer: &[f32]) -> Vec<f32> {
-    let window = apodize::hanning_iter(buffer.len()).collect::<Vec<f64>>();
+    //  let window = apodize::hanning_iter(buffer.len()).collect::<Vec<f64>>();
 
-    buffer
-        .iter()
-        .enumerate()
-        .map(|(idx, val)| window[idx] as f32 * val)
-        .collect()
+    //  buffer
+    //      .iter()
+    //      .enumerate()
+    //      .map(|(idx, val)| window[idx] as f32 * val)
+    //      .collect()
+    hann_window(buffer)
 }
 
 fn scale_frequencies(buffer: &mut Vec<f32>, fav_freqs: &Range<u16>, doubling: u8, max_freqs: u16) {

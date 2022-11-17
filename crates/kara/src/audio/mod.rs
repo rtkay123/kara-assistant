@@ -13,7 +13,7 @@ use crossbeam_channel::{Receiver, Sender};
 use iced_winit::winit::event_loop::EventLoopProxy;
 use mic_rec::StreamOpts;
 use std::sync::{Arc, Mutex};
-use tracing::{debug, error};
+use tracing::{debug, error, span, trace, warn, Level};
 
 pub fn create_asr_sources(
     config: Arc<Mutex<Configuration>>,
@@ -24,44 +24,59 @@ pub fn create_asr_sources(
 
     let (tx_local_model, rx_local_model) = crossbeam_channel::bounded(1);
     tokio::spawn(async move {
-        let config_file = config.lock().unwrap();
+        let config_file = config.lock().expect("failed to acquire config lock");
+        let recogniser_count = &config_file.speech_recognition.sources.len();
+        debug!(
+            available_recognisers = recogniser_count,
+            "creating recognisers"
+        );
+
         let mut speech_recognisers = SpeechRecognisers::new();
 
         for i in &config_file.speech_recognition.sources {
-            debug!(source = i.to_string());
+            debug!(current_source = i.to_string());
             let backend: Option<Box<dyn Transcibe>> = match &i {
                 Source::Kara {
                     model_path,
                     fallback_url,
-                } => match LocalRecogniser::new(model_path, sample_rate) {
-                    Ok(model) => Some(Box::new(model)),
-                    Err(e) => {
-                        error!("{e}");
-                        if i.to_string() == config_file.speech_recognition.default_source {
-                            match try_default_location(model_path, sample_rate) {
-                                Ok(model) => {
-                                    let _ = tx_local_model.send(model);
-                                }
-                                Err(e) => {
-                                    error!("{e}");
-                                    tokio::spawn(get_remote_model(
-                                        Arc::clone(&event_loop),
-                                        tx_local_model.clone(),
-                                        fallback_url.clone(),
-                                        model_path.clone(),
-                                        sample_rate,
-                                    ));
+                } => {
+                    let span = span!(Level::TRACE, "kara");
+                    let _enter = span.enter();
+                    trace!("configuring local recogniser");
+                    match LocalRecogniser::new(model_path, sample_rate) {
+                        Ok(model) => Some(Box::new(model)),
+                        Err(e) => {
+                            error!("{e}");
+                            if i.to_string() == config_file.speech_recognition.default_source {
+                                match try_default_location(model_path, sample_rate) {
+                                    Ok(model) => {
+                                        let _ = tx_local_model.send(model);
+                                    }
+                                    Err(e) => {
+                                        error!("{e}");
+                                        tokio::spawn(get_remote_model(
+                                            Arc::clone(&event_loop),
+                                            tx_local_model.clone(),
+                                            fallback_url.clone(),
+                                            model_path.clone(),
+                                            sample_rate,
+                                        ));
+                                    }
                                 }
                             }
+                            None
                         }
-                        None
                     }
-                },
+                }
                 Source::IBMWatson {
                     api_key,
                     service_url,
                 } => {
+                    let span = span!(Level::TRACE, "ibm_watson");
+                    let _enter = span.enter();
+                    trace!("configuring ibm watson");
                     if api_key.is_empty() && service_url.is_empty() {
+                        warn!("missing [api_key] or [service_url] for IBM Watson");
                         None
                     } else {
                         todo!("create watson instance");
@@ -77,7 +92,7 @@ pub fn create_asr_sources(
                 }
             }
         }
-        tx.send(speech_recognisers).unwrap();
+        let _ = tx.send(speech_recognisers);
     });
     (rx, rx_local_model)
 }
@@ -91,8 +106,6 @@ pub fn start_listening(
 ) -> Sender<AudioEvent> {
     let (visualiser_sender, event_receiver) = crossbeam_channel::unbounded();
     let visualiser_handle = visualiser_sender.clone();
-
-    use tracing::trace;
 
     // blocking task that handles visualising
     use crate::graphics::visualise;

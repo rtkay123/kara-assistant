@@ -12,7 +12,7 @@ use tokio::{
     fs::{create_dir_all, File, OpenOptions},
     io::{AsyncSeekExt, AsyncWriteExt},
 };
-use tracing::{debug, error, trace};
+use tracing::{debug, error, info, trace};
 use zip::ZipArchive;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
@@ -49,6 +49,7 @@ impl ResGet {
     }
 
     pub async fn get_asr_model(&self) -> Result<()> {
+        trace!("starting model download");
         create_dir_all(&self.vosk_model.destination).await?;
         let mut path_buf = self.vosk_model.destination.clone();
         let head = self.client.head(&self.vosk_model.url).send().await?;
@@ -77,7 +78,7 @@ impl ResGet {
         outfile.seek(tokio::io::SeekFrom::Start(file_size)).await?;
         let mut downloaded = file_size;
 
-        let url = &self.vosk_model.url;
+        let url = self.vosk_model.url.as_str();
 
         match content_length {
             Some(content_length) => {
@@ -100,11 +101,13 @@ impl ResGet {
                         downloaded = new;
                         let progress = downloaded as f32 / content_length as f32 * 100.0;
                         self.progress_sender.send(progress)?;
+                        debug!(download_progress = format!("{progress}%"));
                     }
                     let file = File::open(&path_buf).await?;
                     let content = head.bytes().await?;
                     let mut content = content.as_ref();
                     tokio::io::copy(&mut content, &mut outfile).await?;
+                    debug!("model downloaded successfully");
                     extract_file(
                         file,
                         path_buf.parent().ok_or("no parent")?,
@@ -147,6 +150,7 @@ async fn download_no_resume(
     file_name: &str,
     progress_sender: &crossbeam_channel::Sender<f32>,
 ) -> Result<()> {
+    trace!("starting no resume download");
     let res = client
         .get(url)
         .send()
@@ -167,6 +171,9 @@ async fn download_no_resume(
         let progress = downloaded as f32 / total_size as f32 * 100.0;
         progress_sender.send(progress)?;
     }
+
+    debug!("download completed successfully");
+
     extract_file(file, path_buf.parent().ok_or("no parent")?, file_name).await?;
     Ok(())
 }
@@ -212,7 +219,7 @@ impl Iterator for PartialRangeIter {
 }
 
 async fn extract_file(file: File, base_parent: &Path, file_name: &str) -> Result<()> {
-    println!("{}", file_name);
+    trace!(file = file_name, "attempting extraction");
     use gag::Gag;
     let file = file.into_std().await;
     let _err_gag = Gag::stderr()?;
@@ -222,7 +229,7 @@ async fn extract_file(file: File, base_parent: &Path, file_name: &str) -> Result
     for i in 0..archive.len() {
         println!("loop");
 
-        let mut file = archive.by_index(i).unwrap();
+        let mut file = archive.by_index(i)?;
         let mut outpath = match file.enclosed_name() {
             Some(path) => path.to_owned(),
             None => continue,
@@ -245,7 +252,7 @@ async fn extract_file(file: File, base_parent: &Path, file_name: &str) -> Result
         {
             let comment = file.comment();
             if !comment.is_empty() {
-                debug!("File {} comment: {}", i, comment);
+                debug!(file = i, comment = comment);
             }
         }
 
@@ -275,12 +282,15 @@ async fn extract_file(file: File, base_parent: &Path, file_name: &str) -> Result
             use std::os::unix::fs::PermissionsExt;
 
             if let Some(mode) = file.unix_mode() {
-                std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode)).unwrap();
+                let _ = std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode));
             }
         }
     }
 
     tokio::fs::remove_file(file_name).await?;
 
+    let path = base_parent.display().to_string();
+
+    info!(path = path, "local recogniser model is ready");
     Ok(())
 }

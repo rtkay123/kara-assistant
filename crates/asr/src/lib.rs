@@ -41,5 +41,3 @@ pub enum TranscriptionError {
 }
 
 type Result<T> = std::result::Result<T, TranscriptionError>;
-
-pub use crossbeam_channel;

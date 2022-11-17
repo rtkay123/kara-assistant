@@ -36,7 +36,7 @@ impl Transcibe for LocalRecogniser {
                     .map_err(|f| TranscriptionError::SendError(f.to_string()))?;
             }
             vosk::DecodingState::Failed => {
-                error!("local transcription failed");
+                error!(source = "kara", "local transcription failed");
             }
         }
         Ok(())
