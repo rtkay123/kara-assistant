@@ -131,6 +131,7 @@ name = "asr"
 version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
+ "dirs",
  "gag",
  "serde",
  "thiserror",
@@ -300,12 +301,12 @@ dependencies = [
 
 [[package]]
 name = "calloop"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "595eb0438b3c6d262395fe30e6de9a61beb57ea56290b00a07f227fe6e20cbf2"
+checksum = "5bcf530afb40e45e14440701e5e996d7fd139e84a912a4d83a8d6a0fb3e58663"
 dependencies = [
  "log",
- "nix 0.24.2",
+ "nix 0.25.0",
  "slotmap",
  "thiserror",
  "vec_map",
@@ -369,9 +370,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.0.23"
+version = "4.0.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0eb41c13df48950b20eb4cd0eefa618819469df1bffc49d11e8487c4ba0037e5"
+checksum = "2148adefda54e14492fb9bddcc600b4344c5d1a3123bd666dcb939c6f0e0e57e"
 dependencies = [
  "atty",
  "bitflags",
@@ -1550,7 +1551,7 @@ dependencies = [
 [[package]]
 name = "iced_core"
 version = "0.6.1"
-source = "git+https://github.com/iced-rs/iced#23299a555f8b7e908a6a14915307792a7cf97b9a"
+source = "git+https://github.com/iced-rs/iced#5b0dfcd0b0a9f25a3004dbc2cad3dea8220a76a1"
 dependencies = [
  "bitflags",
  "palette",
@@ -1560,7 +1561,7 @@ dependencies = [
 [[package]]
 name = "iced_futures"
 version = "0.5.1"
-source = "git+https://github.com/iced-rs/iced#23299a555f8b7e908a6a14915307792a7cf97b9a"
+source = "git+https://github.com/iced-rs/iced#5b0dfcd0b0a9f25a3004dbc2cad3dea8220a76a1"
 dependencies = [
  "futures",
  "log",
@@ -1571,7 +1572,7 @@ dependencies = [
 [[package]]
 name = "iced_graphics"
 version = "0.4.0"
-source = "git+https://github.com/iced-rs/iced#23299a555f8b7e908a6a14915307792a7cf97b9a"
+source = "git+https://github.com/iced-rs/iced#5b0dfcd0b0a9f25a3004dbc2cad3dea8220a76a1"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -1586,7 +1587,7 @@ dependencies = [
 [[package]]
 name = "iced_native"
 version = "0.6.1"
-source = "git+https://github.com/iced-rs/iced#23299a555f8b7e908a6a14915307792a7cf97b9a"
+source = "git+https://github.com/iced-rs/iced#5b0dfcd0b0a9f25a3004dbc2cad3dea8220a76a1"
 dependencies = [
  "iced_core",
  "iced_futures",
@@ -1599,7 +1600,7 @@ dependencies = [
 [[package]]
 name = "iced_style"
 version = "0.5.0"
-source = "git+https://github.com/iced-rs/iced#23299a555f8b7e908a6a14915307792a7cf97b9a"
+source = "git+https://github.com/iced-rs/iced#5b0dfcd0b0a9f25a3004dbc2cad3dea8220a76a1"
 dependencies = [
  "iced_core",
  "once_cell",
@@ -1609,7 +1610,7 @@ dependencies = [
 [[package]]
 name = "iced_wgpu"
 version = "0.6.1"
-source = "git+https://github.com/iced-rs/iced#23299a555f8b7e908a6a14915307792a7cf97b9a"
+source = "git+https://github.com/iced-rs/iced#5b0dfcd0b0a9f25a3004dbc2cad3dea8220a76a1"
 dependencies = [
  "bitflags",
  "bytemuck",
@@ -1629,7 +1630,7 @@ dependencies = [
 [[package]]
 name = "iced_winit"
 version = "0.5.1"
-source = "git+https://github.com/iced-rs/iced#23299a555f8b7e908a6a14915307792a7cf97b9a"
+source = "git+https://github.com/iced-rs/iced#5b0dfcd0b0a9f25a3004dbc2cad3dea8220a76a1"
 dependencies = [
  "iced_futures",
  "iced_graphics",
@@ -2814,9 +2815,9 @@ checksum = "f1382d1f0a252c4bf97dc20d979a2fdd05b024acd7c2ed0f7595d7817666a157"
 
 [[package]]
 name = "reqwest"
-version = "0.11.12"
+version = "0.11.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "431949c384f4e2ae07605ccaa56d1d9d2ecdb5cadd4f9577ccfab29f2e5149fc"
+checksum = "68cc60575865c7831548863cc02356512e3f1dc2f3f82cb837d7fc4cc8f3c97c"
 dependencies = [
  "base64",
  "bytes",

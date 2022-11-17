@@ -12,7 +12,8 @@ use tokio::{
     fs::{create_dir_all, File, OpenOptions},
     io::{AsyncSeekExt, AsyncWriteExt},
 };
-use tracing::{error, trace};
+use tracing::{debug, error, trace};
+use zip::ZipArchive;
 
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
@@ -116,7 +117,7 @@ impl ResGet {
                         &self.client,
                         &path_buf,
                         url,
-                        &file_name,
+                        file_name,
                         &self.progress_sender,
                     )
                     .await?;
@@ -128,7 +129,7 @@ impl ResGet {
                     &self.client,
                     &path_buf,
                     url,
-                    &file_name,
+                    file_name,
                     &self.progress_sender,
                 )
                 .await?;
@@ -210,23 +211,76 @@ impl Iterator for PartialRangeIter {
     }
 }
 
-async fn extract_file(file: File, parent: &Path, file_name: &str) -> Result<()> {
+async fn extract_file(file: File, base_parent: &Path, file_name: &str) -> Result<()> {
+    println!("{}", file_name);
     use gag::Gag;
     let file = file.into_std().await;
-    let _print_gag = Gag::stderr()?;
-    let file_name = PathBuf::from(file_name);
-    let file_name = file_name.file_name().ok_or("could not get file name")?;
-    let file_name = file_name.to_string_lossy().to_string();
-    let parent_str = parent.to_string_lossy().to_string();
-    trace!(
-        file_name = file_name,
-        parent_dir = parent_str,
-        "extracting file"
-    );
-    let mut archive = zip::ZipArchive::new(file)?;
+    let _err_gag = Gag::stderr()?;
+    let _print_gag = Gag::stdout()?;
 
-    tokio::fs::create_dir_all(parent).await?;
+    let mut archive = ZipArchive::new(file)?;
+    for i in 0..archive.len() {
+        println!("loop");
 
-    archive.extract(parent)?;
+        let mut file = archive.by_index(i).unwrap();
+        let mut outpath = match file.enclosed_name() {
+            Some(path) => path.to_owned(),
+            None => continue,
+        };
+
+        trace!("found outpath: {}", outpath.display());
+
+        if let Some(parent) = outpath.parent() {
+            if !parent.display().to_string().is_empty() {
+                let mut b: Vec<_> = outpath.components().collect();
+                let html = std::ffi::OsString::from(base_parent);
+                b[0] = std::path::Component::Normal(&html);
+                outpath = b.iter().collect();
+            } else {
+                outpath = base_parent.to_path_buf();
+            }
+        }
+        trace!("modified outpath: {}", outpath.display());
+
+        {
+            let comment = file.comment();
+            if !comment.is_empty() {
+                debug!("File {} comment: {}", i, comment);
+            }
+        }
+
+        if (*file.name()).ends_with('/') {
+            debug!("dir {} extracted to \"{}\"", i, outpath.display());
+            // create asr dir and pass it as parameter
+            std::fs::create_dir_all(&outpath)?;
+        } else {
+            debug!(
+                "File {} extracted to \"{}\" ({} bytes)",
+                i,
+                outpath.display(),
+                file.size()
+            );
+            if let Some(p) = outpath.parent() {
+                if !p.exists() {
+                    std::fs::create_dir_all(p)?;
+                }
+            }
+            let mut outfile = std::fs::File::create(&outpath)?;
+            std::io::copy(&mut file, &mut outfile)?;
+        }
+
+        // Get and Set permissions
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+
+            if let Some(mode) = file.unix_mode() {
+                std::fs::set_permissions(&outpath, std::fs::Permissions::from_mode(mode)).unwrap();
+            }
+        }
+    }
+
+    tokio::fs::remove_file(file_name).await?;
+
     Ok(())
 }

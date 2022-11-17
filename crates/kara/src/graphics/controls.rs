@@ -1,8 +1,11 @@
 use std::str::FromStr;
 
 use iced_wgpu::Renderer;
-use iced_winit::widget::{progress_bar, Column, Container, Text};
-use iced_winit::{alignment, Color, Command, Element, Length, Program};
+use iced_winit::{
+    alignment,
+    widget::{progress_bar, Column, Container, Text},
+    Color, Command, Element, Length, Program,
+};
 use palette::Srgb;
 use tracing::error;
 
@@ -83,7 +86,6 @@ impl Program for Controls {
             }
             KaraEvent::ReadingSpeech(text) | KaraEvent::FinalisedSpeech(text) => self.text = text,
             KaraEvent::UpdateProgressBar(new_progress) => {
-                println!("{}", new_progress);
                 self.progress_bar = new_progress;
             }
             _ => {}
@@ -92,13 +94,20 @@ impl Program for Controls {
     }
 
     fn view(&self) -> Element<KaraEvent, Renderer> {
-        let content = Column::new().push(
-            Text::new(&self.text)
-                .style(self.foreground_colour())
-                .size(self.font_size),
-        );
+        let content = Column::new()
+            .spacing(100)
+            .push(
+                Text::new(&self.text)
+                    .style(self.foreground_colour())
+                    .size(self.font_size),
+            )
+            .align_items(iced_winit::Alignment::Center);
         Container::new(if self.progress_bar < 100.0 {
-            content.push(progress_bar(0.0..=100.0, self.progress_bar))
+            content.push(
+                Column::new()
+                    .push("Downloading resourses. Please wait...")
+                    .push(progress_bar(0.0..=100.0, self.progress_bar)),
+            )
         } else {
             content
         })

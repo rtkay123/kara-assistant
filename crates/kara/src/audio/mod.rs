@@ -33,12 +33,12 @@ pub fn create_asr_sources(
                 Source::Kara {
                     model_path,
                     fallback_url,
-                } => match LocalRecogniser::new(&model_path, sample_rate) {
+                } => match LocalRecogniser::new(model_path, sample_rate) {
                     Ok(model) => Some(Box::new(model)),
                     Err(e) => {
                         error!("{e}");
                         if i.to_string() == config_file.speech_recognition.default_source {
-                            match try_default_location(&model_path, sample_rate) {
+                            match try_default_location(model_path, sample_rate) {
                                 Ok(model) => {
                                     let _ = tx_local_model.send(model);
                                 }
