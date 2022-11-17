@@ -4,6 +4,7 @@ use std::{collections::VecDeque, path::PathBuf};
 
 use crossbeam_channel::Sender;
 use dirs::data_dir;
+use res_def::vosk_model_url;
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 
@@ -41,7 +42,7 @@ fn model_path() -> PathBuf {
 }
 
 fn vosk_link() -> String {
-    String::from("https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip")
+    vosk_model_url()
 }
 
 fn empty_string() -> String {

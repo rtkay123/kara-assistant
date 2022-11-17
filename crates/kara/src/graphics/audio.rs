@@ -28,10 +28,10 @@ pub fn visualise(
         let mut smoothing_buffer: Vec<Vec<f32>> = Vec::new();
         let mut smoothed_buffer: Vec<f32> = Vec::new();
 
-        loop {
-            match event_receiver.recv().unwrap() {
+        while let Ok(event) = event_receiver.recv() {
+            match event {
                 Event::SendData(mut b) => {
-                    let config = config.lock().unwrap();
+                    let config = config.lock().expect("could not acquire config lock");
                     let config = match &config.audio {
                         Some(audio) => audio.visualiser.clone(),
                         None => Visualiser::default(),
@@ -64,7 +64,7 @@ pub fn visualise(
                         .expect("audio thread lost connection to bridge");
                 }
                 Event::RequestRefresh => {
-                    let config = config.lock().unwrap();
+                    let config = config.lock().expect("could not acquire config lock");
                     let config = match &config.audio {
                         Some(audio) => audio.visualiser.clone(),
                         None => Visualiser::default(),

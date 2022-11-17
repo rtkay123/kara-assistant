@@ -34,7 +34,7 @@ fn async_watcher() -> notify::Result<(
     // You can also access each implementation directly e.g. INotifyWatcher.
     let watcher = RecommendedWatcher::new(
         move |res| {
-            tx.send(res).unwrap();
+            let _ = tx.send(res);
         },
         Config::default(),
     )?;
@@ -65,7 +65,8 @@ fn async_watch(
 
                             match read_file(&current_path) {
                                 Ok(Ok(config)) => {
-                                    let proxy = event_loop_proxy.lock().unwrap();
+                                    let proxy =
+                                        event_loop_proxy.lock().expect("could not get proxy lock");
                                     if let Err(e) = proxy.send_event(
                                         KaraEvent::ReloadConfiguration(Box::new(config)),
                                     ) {

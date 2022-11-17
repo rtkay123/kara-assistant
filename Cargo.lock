@@ -127,6 +127,7 @@ dependencies = [
  "crossbeam-channel",
  "dirs",
  "gag",
+ "res-def",
  "serde",
  "thiserror",
  "tokio",
@@ -2845,6 +2846,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "res-def"
+version = "0.1.0"
+dependencies = [
+ "url",
+]
+
+[[package]]
 name = "res-get"
 version = "0.1.0"
 dependencies = [
@@ -2852,6 +2860,7 @@ dependencies = [
  "futures-util",
  "gag",
  "reqwest",
+ "res-def",
  "thiserror",
  "tokio",
  "tracing",
