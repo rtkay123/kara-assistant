@@ -63,7 +63,12 @@ fn async_watch(
                             let mut current_path = path.as_ref().to_path_buf();
                             current_path.push("kara/kara.toml");
 
-                            parse_file(&path, Arc::clone(&event_loop_proxy), "kara/kara.toml");
+                            parse_file(
+                                &path,
+                                Arc::clone(&event_loop_proxy),
+                                "kara/kara.toml",
+                                true,
+                            );
                         }
                         true
                     } else {
@@ -81,6 +86,7 @@ pub fn parse_file(
     base_path: impl AsRef<Path>,
     event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>,
     path: impl AsRef<Path>,
+    failable: bool,
 ) {
     let send_config_file = |event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>,
                             configuration: Configuration| {
@@ -104,7 +110,12 @@ pub fn parse_file(
                 path = current_path.display().to_string(),
                 "{e}, trying fallback"
             );
-            parse_file(base_path, event_loop_proxy, "kara.toml");
+            if failable {
+                parse_file(base_path, event_loop_proxy, "kara.toml", false);
+            } else {
+                let config = read_config_file();
+                send_config_file(event_loop_proxy, config);
+            }
         }
         Err(e) => {
             if e.kind() == std::io::ErrorKind::NotFound {
