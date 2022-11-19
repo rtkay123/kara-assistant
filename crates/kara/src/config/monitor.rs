@@ -11,7 +11,7 @@ use tracing::{error, trace, warn};
 
 use crate::events::KaraEvent;
 
-use super::read_file;
+use super::{read_config_file, read_file, Configuration};
 
 #[cfg(feature = "graphical")]
 pub fn monitor_config(event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>) {
@@ -61,27 +61,9 @@ fn async_watch(
                     if let Some(file_name) = f.file_name() {
                         if file_name == "kara.toml" {
                             let mut current_path = path.as_ref().to_path_buf();
-                            current_path.push("kara.toml");
+                            current_path.push("kara/kara.toml");
 
-                            match read_file(&current_path) {
-                                Ok(Ok(config)) => {
-                                    let proxy =
-                                        event_loop_proxy.lock().expect("could not get proxy lock");
-                                    if let Err(e) = proxy.send_event(
-                                        KaraEvent::ReloadConfiguration(Box::new(config)),
-                                    ) {
-                                        error!("send event error {:?}", e);
-                                    } else {
-                                        trace!("configuration reloaded");
-                                    }
-                                }
-                                Ok(Err(e)) => {
-                                    error!("{e}");
-                                }
-                                Err(e) => {
-                                    error!("{e}");
-                                }
-                            }
+                            parse_file(&path, Arc::clone(&event_loop_proxy), "kara/kara.toml");
                         }
                         true
                     } else {
@@ -93,4 +75,47 @@ fn async_watch(
         }
     }
     Ok(())
+}
+
+pub fn parse_file(
+    base_path: impl AsRef<Path>,
+    event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>,
+    path: impl AsRef<Path>,
+) {
+    let send_config_file = |event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>,
+                            configuration: Configuration| {
+        let proxy = event_loop_proxy.lock().expect("could not get proxy lock");
+        if let Err(e) = proxy.send_event(KaraEvent::ReloadConfiguration(Box::new(configuration))) {
+            error!("send event error {:?}", e);
+        } else {
+            trace!("configuration reloaded");
+        }
+    };
+
+    let mut current_path = base_path.as_ref().to_path_buf();
+    current_path.push(&path);
+
+    match read_file(&current_path) {
+        Ok(Ok(config)) => {
+            send_config_file(event_loop_proxy, config);
+        }
+        Ok(Err(e)) => {
+            error!(
+                path = current_path.display().to_string(),
+                "{e}, trying fallback"
+            );
+            parse_file(base_path, event_loop_proxy, "kara.toml");
+        }
+        Err(e) => {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                let config = read_config_file();
+                send_config_file(event_loop_proxy, config);
+            } else {
+                error!(
+                    path = base_path.as_ref().display().to_string(),
+                    "{e}, using default"
+                );
+            }
+        }
+    }
 }
