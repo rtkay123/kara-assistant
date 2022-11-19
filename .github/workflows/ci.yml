@@ -27,6 +27,8 @@ jobs:
           toolchain: stable
           components: 'rustfmt, clippy'
 
+      - uses: Swatinem/rust-cache@v2
+
       - name: Run rustfmt
         run: cargo fmt --all -- --check
 
@@ -34,7 +36,12 @@ jobs:
         run: sudo apt install ${{ env.NATIVE_DEPS }}
 
       - name: Run clippy
-        run: cargo clippy --workspace --all-targets --all-features
+        uses: giraffate/clippy-action@v1
+        with:
+          #reporter: 'github-pr-review'
+          reporter: 'github-check'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          fail_on_error: true
 
   rust:
     runs-on: ubuntu-latest
@@ -53,6 +60,8 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.toolchain }}
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-make
         run: cargo install --debug cargo-make
