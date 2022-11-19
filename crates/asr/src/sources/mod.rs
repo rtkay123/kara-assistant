@@ -10,7 +10,7 @@ use tracing::{error, trace};
 
 use crate::{Transcibe, TranscriptionError, TranscriptionResult};
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 #[serde(tag = "source")]
 pub enum Source {

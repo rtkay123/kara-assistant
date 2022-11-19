@@ -32,7 +32,7 @@ fn colours() -> Colours {
     Colours::default()
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct Colours {
     #[serde(default = "default_background")]
     pub background: String,
