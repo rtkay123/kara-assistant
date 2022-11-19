@@ -111,6 +111,9 @@ pub struct Visualiser {
 
     #[serde(default = "stroke")]
     pub stroke: f32,
+
+    #[serde(default = "rotation")]
+    pub rotation: f32,
 }
 
 fn stroke() -> f32 {
@@ -119,6 +122,10 @@ fn stroke() -> f32 {
 
 fn vis_radius() -> f32 {
     0.25
+}
+
+fn rotation() -> f32 {
+    0.0
 }
 
 impl Default for Visualiser {
@@ -134,6 +141,7 @@ impl Default for Visualiser {
             bottom_colour: vis_bottom(),
             radius: vis_radius(),
             stroke: stroke(),
+            rotation: rotation(),
         }
     }
 }

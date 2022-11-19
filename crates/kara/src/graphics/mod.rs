@@ -247,18 +247,24 @@ pub async fn run() -> anyhow::Result<()> {
                                 let conf = config_file
                                     .lock()
                                     .expect("could not acquire config file lock");
+
                                 let vis = match &conf.audio {
                                     Some(audio) => audio.visualiser.clone(),
                                     None => Visualiser::default(),
                                 };
-                                let stroke = vis.stroke;
                                 drop(conf);
+
+                                let stroke = vis.stroke;
+                                let radius = vis.radius;
+                                let rotation = vis.rotation;
+
                                 let (tr, tg, tb) =
                                     map_colour(&vis.top_colour, controls::ColourType::Foreground);
                                 let (br, bg, bb) = map_colour(
                                     &vis.bottom_colour,
                                     controls::ColourType::Foreground,
                                 );
+                                drop(vis);
 
                                 let (top_color, bottom_color) = ([tr, tg, tb], [br, bg, bb]);
 
@@ -271,7 +277,7 @@ pub async fn run() -> anyhow::Result<()> {
                                         window.inner_size().width as f32 * 0.001,
                                         window.inner_size().height as f32 * 0.001,
                                     ],
-                                    vis.radius,
+                                    (radius, rotation),
                                 );
 
                                 scene.update_buffers(&device, vertices, indices);

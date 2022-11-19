@@ -12,6 +12,7 @@
 #   [audio.visualiser]
 #   stroke = 1.0
 #   radius = 0.2
+#   rotation = 0
 #   loudness = 1
 #   buffering = 5
 #   smoothing-size = 10

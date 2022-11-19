@@ -55,9 +55,16 @@ pub(crate) fn prepare_data(
     top_color: [f32; 3],
     bottom_color: [f32; 3],
     size: [f32; 2],
-    radius: f32,
+    radius_rotation: (f32, f32),
 ) -> (Vec<Vertex>, Vec<u16>) {
+    let (radius, rotation) = radius_rotation;
     let window_area = size[0] * size[1];
+
+    let rotation = if rotation + 270.0 > 360.0 {
+        rotation + 270.0 - 360.0
+    } else {
+        rotation + 270.0
+    };
 
     // make the circle scale
     let radius = window_area * radius;
@@ -76,7 +83,7 @@ pub(crate) fn prepare_data(
     let degree: f32 = 2.0 * PI / 360.0;
     for i in 0..buffer.len() - 1 {
         let mut angle: f32 = 2.0 * PI * (i + 1) as f32 / (buffer.len() - 2) as f32;
-        angle += degree * 270.0; // rotate circle 270°
+        angle += degree * rotation; // rotate circle 270°
 
         let value: f32 = buffer[i];
 
