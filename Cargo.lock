@@ -125,7 +125,6 @@ name = "asr"
 version = "0.1.0"
 dependencies = [
  "crossbeam-channel",
- "dirs",
  "gag",
  "res-def",
  "serde",
@@ -1761,6 +1760,7 @@ dependencies = [
  "mic-rec",
  "notify",
  "palette",
+ "res-def",
  "res-get",
  "serde",
  "tokio",
@@ -2849,6 +2849,7 @@ dependencies = [
 name = "res-def"
 version = "0.1.0"
 dependencies = [
+ "dirs",
  "url",
 ]
 

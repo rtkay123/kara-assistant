@@ -3,8 +3,8 @@ pub mod kara;
 use std::{collections::VecDeque, path::PathBuf};
 
 use crossbeam_channel::Sender;
-use dirs::data_dir;
-use res_def::vosk_model_url;
+
+use res_def::{model_path, vosk_model_url};
 use serde::{Deserialize, Serialize};
 use tracing::{error, trace};
 
@@ -33,12 +33,6 @@ pub enum Source {
         #[serde(default = "empty_string")]
         service_url: String,
     },
-}
-
-fn model_path() -> PathBuf {
-    let mut data_dir = data_dir().unwrap_or_default();
-    data_dir.push("kara/asr");
-    data_dir
 }
 
 fn vosk_link() -> String {

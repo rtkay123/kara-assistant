@@ -30,17 +30,20 @@ pub async fn get_remote_model(
     let res_get = ResGet::new(fallback_url.as_ref(), &model_path);
     let progress = res_get.get_progress().clone();
     tokio::spawn(async move {
-        if let Err(e) = res_get.get_asr_model().await {
-            error!("{e}");
-        } else {
-            // send with sender
-            match try_default_location(model_path, sample_rate) {
-                Ok(model) => {
-                    let _ = sender.send(model);
-                }
-                Err(e) => {
+        // send with sender
+        tracing::warn!(
+            model_path = model_path.display().to_string(),
+            "trying default sender"
+        );
+        match try_default_location(model_path, sample_rate) {
+            Ok(model) => {
+                let _ = sender.send(model);
+            }
+            Err(e) => {
+                if let Err(e) = res_get.get_asr_model().await {
                     error!("{e}");
                 }
+                error!("{e}");
             }
         }
     });

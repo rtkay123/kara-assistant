@@ -46,9 +46,14 @@ pub fn create_asr_sources(
                     match LocalRecogniser::new(model_path, sample_rate) {
                         Ok(model) => Some(Box::new(model)),
                         Err(e) => {
-                            error!("{e}");
+                            error!(path = model_path.display().to_string(), "{e}");
                             if i.to_string() == config_file.speech_recognition.default_source {
-                                match try_default_location(model_path, sample_rate) {
+                                let model_path = if model_path.as_os_str().is_empty() {
+                                    res_def::model_path()
+                                } else {
+                                    model_path.to_owned()
+                                };
+                                match try_default_location(&model_path, sample_rate) {
                                     Ok(model) => {
                                         let _ = tx_local_model.send(model);
                                     }

@@ -19,6 +19,7 @@ pub(crate) fn initialise_logger() -> Result<()> {
                 .add_directive("wgpu_hal=error".parse()?)
                 .add_directive("asr::sources=error".parse()?)
                 .add_directive("kara::audio=info".parse()?)
+                .add_directive("hyper=warn".parse()?)
                 .add_directive("iced_wgpu=warn".parse()?),
         )
         .init();

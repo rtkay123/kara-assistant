@@ -11,6 +11,7 @@ use reqwest::{
     header::{ACCEPT_RANGES, CONTENT_LENGTH, RANGE},
     Client, StatusCode,
 };
+use res_def::model_path;
 use tokio::{
     fs::{create_dir_all, File, OpenOptions},
     io::{AsyncSeekExt, AsyncWriteExt},
@@ -34,13 +35,18 @@ pub struct ResGet {
 
 impl ResGet {
     pub fn new(url: &str, destination: impl AsRef<Path>) -> Self {
+        let destination = if destination.as_ref().as_os_str().is_empty() {
+            model_path()
+        } else {
+            destination.as_ref().to_path_buf()
+        };
         let client = Client::new();
         let (tx, rx) = crossbeam_channel::unbounded();
         Self {
             client,
             vosk_model: VoskModel {
                 url: url.to_string(),
-                destination: destination.as_ref().to_path_buf(),
+                destination,
                 progress: rx,
             },
             progress_sender: tx,
