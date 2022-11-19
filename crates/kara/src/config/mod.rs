@@ -168,7 +168,7 @@ fn default_loudness() -> f32 {
     1.5
 }
 
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SpeechRecognition {
     #[serde(default = "default_source")]
     #[serde(deserialize_with = "de_source_name_only")]
