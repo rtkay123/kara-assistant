@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, process};
 
 use iced_wgpu::wgpu;
 
@@ -69,8 +69,9 @@ pub(crate) fn prepare_data(
     // make the circle scale
     let radius = window_area * radius;
 
-    let mut vertices: Vec<Vertex> = Vec::new();
-    let mut indices: Vec<u16> = Vec::new();
+    // 4 vertex pushes and 6 index pushes per iteration
+    let mut vertices: Vec<Vertex> = Vec::with_capacity(4 * buffer.len());
+    let mut indices: Vec<u16> = Vec::with_capacity(6 * buffer.len());
 
     if buffer.is_empty() {
         return (Vec::new(), Vec::new());
