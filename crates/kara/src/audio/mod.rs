@@ -81,7 +81,7 @@ pub fn create_asr_sources(
                     let _enter = span.enter();
                     trace!("configuring ibm watson");
                     if api_key.is_empty() && service_url.is_empty() {
-                        warn!("missing [api_key] or [service_url] for IBM Watson");
+                        warn!(source = "IBM Watson", "missing [api_key] or [service_url]");
                         None
                     } else {
                         todo!("create watson instance");
@@ -123,11 +123,11 @@ pub fn start_listening(
         let (speech_recognisers, local_recogniser) = speech_recognisers;
         if let Ok(mut recognisers) = speech_recognisers.recv() {
             while let Ok(audio_buf) = stream_opts.audio_feed().recv() {
-                let _transciption_data =
+                let transciption_data =
                     audio_utils::resample_i16_mono(&audio_buf, stream_opts.channel_count());
                 if recognisers.valid() {
                     trace!("valid");
-                    if let Err(e) = recognisers.speech_to_text(&_transciption_data, &tx) {
+                    if let Err(e) = recognisers.speech_to_text(&transciption_data, &tx) {
                         error!("{e}");
                     }
                     if let Ok(ev) = rx.recv() {

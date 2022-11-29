@@ -6,7 +6,7 @@ use crossbeam_channel::Sender;
 
 use res_def::{model_path, vosk_model_url};
 use serde::{Deserialize, Serialize};
-use tracing::{error, trace};
+use tracing::{error, info, trace};
 
 use crate::{Transcibe, TranscriptionError, TranscriptionResult};
 
@@ -74,11 +74,16 @@ impl SpeechRecognisers {
     }
 
     pub fn add(&mut self, source: Box<dyn Transcibe>) {
+        let source_name = source.source();
+        trace!(source = source_name, "adding speech recognition backend");
         self.sources.push_back(source);
     }
 
     pub fn add_primary(&mut self, source: Box<dyn Transcibe>) {
+        let source_name = source.source().to_string();
+        trace!(source = source_name, "setting primary backend");
         self.sources.push_front(source);
+        info!(source = source_name, "using primary backend");
     }
 
     pub fn valid(&self) -> bool {
@@ -92,9 +97,9 @@ impl SpeechRecognisers {
     ) -> Result<(), TranscriptionError> {
         for i in self.sources.iter() {
             if let Err(e) = i.transcribe(feed, result_sender) {
-                error!("{}, trying fallback", e.to_string());
+                error!(source = i.source(), "{}, trying fallback", e.to_string());
             } else {
-                trace!("transcription completed");
+                // trace!("transcription completed");
                 break;
             }
         }

@@ -9,6 +9,10 @@ pub struct LocalRecogniser {
 }
 
 impl Transcibe for LocalRecogniser {
+    fn source(&self) -> &str {
+        "kara"
+    }
+
     fn transcribe(
         &self,
         stream: &[i16],

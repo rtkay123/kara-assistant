@@ -23,10 +23,10 @@ pub fn visualise(
         end: 1000,
     };
     tokio::task::spawn_blocking(move || {
-        let mut buffer: Vec<f32> = Vec::new();
-        let mut calculated_buffer: Vec<f32> = Vec::new();
-        let mut smoothing_buffer: Vec<Vec<f32>> = Vec::new();
-        let mut smoothed_buffer: Vec<f32> = Vec::new();
+        let mut buffer = vec![];
+        let mut calculated_buffer = vec![];
+        let mut smoothing_buffer = vec![];
+        let mut smoothed_buffer = vec![];
 
         while let Ok(event) = event_receiver.recv() {
             match event {
@@ -58,11 +58,13 @@ pub fn visualise(
                         buffer.drain(0..resolution);
                     }
                 }
+
                 Event::RequestData(sender) => {
                     sender
                         .send(smoothed_buffer.clone())
                         .expect("audio thread lost connection to bridge");
                 }
+
                 Event::RequestRefresh => {
                     let config = config.lock().expect("could not acquire config lock");
                     let config = match &config.audio {

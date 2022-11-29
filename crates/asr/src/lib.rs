@@ -1,6 +1,7 @@
 pub mod sources;
 
 pub trait Transcibe: Send {
+    fn source(&self) -> &str;
     fn transcribe(&self, stream: &[i16], result_sender: &Sender<TranscriptionResult>)
         -> Result<()>;
 }
@@ -27,7 +28,7 @@ impl TranscriptionResult {
     }
 }
 
-use crossbeam_channel::Sender;
+pub use crossbeam_channel::Sender;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

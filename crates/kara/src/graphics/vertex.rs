@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, process};
+use std::f32::consts::PI;
 
 use iced_wgpu::wgpu;
 
@@ -123,8 +123,8 @@ fn draw_line(
     vertex_len: u16,
     size: [f32; 2],
 ) -> (Vec<Vertex>, Vec<u16>) {
-    let mut vertices: Vec<Vertex> = Vec::new();
-    let mut indices: Vec<u16> = Vec::new();
+    let mut vertices: Vec<Vertex> = Vec::with_capacity(4);
+    let mut indices: Vec<u16> = Vec::with_capacity(6);
 
     let x1: f32 = point1[0];
     let x2: f32 = point2[0];
