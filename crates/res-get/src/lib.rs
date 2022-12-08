@@ -149,7 +149,10 @@ impl ResGet {
                 .await?;
             }
         }
-
+        notify_rust::Notification::new()
+            .summary("Kara")
+            .body("Your model is ready")
+            .show()?;
         Ok(())
     }
 }

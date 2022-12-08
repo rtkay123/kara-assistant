@@ -8,7 +8,7 @@ use asr::sources::kara::LocalRecogniser;
 use crossbeam_channel::Sender;
 use iced_winit::winit::event_loop::EventLoopProxy;
 use res_get::ResGet;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 use crate::events::KaraEvent;
 
@@ -35,16 +35,19 @@ pub async fn get_remote_model(
             model_path = model_path.display().to_string(),
             "trying default sender"
         );
-        match try_default_location(model_path, sample_rate) {
-            Ok(model) => {
-                let _ = sender.send(model);
-            }
-            Err(e) => {
-                if let Err(e) = res_get.get_asr_model().await {
+
+        if let Err(e) = try_default_location(model_path, sample_rate).and_then(|model| {
+            let _ = sender.send(model);
+            Ok(())
+        }) {
+            res_get.get_asr_model().await.and_then(|| {
+                if let Err(e) = try_default_location(model_path, sample_rate).and_then(|model| {
+                    let _ = sender.send(model);
+                    Ok(())
+                }) {
                     error!("{e}");
                 }
-                error!("{e}");
-            }
+            });
         }
     });
     tokio::spawn(async move {
