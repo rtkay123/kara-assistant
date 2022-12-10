@@ -36,15 +36,13 @@ pub async fn get_remote_model(
             "trying default sender"
         );
 
-        if let Err(e) = try_default_location(&model_path, sample_rate).and_then(|model| {
+        if let Err(e) = try_default_location(&model_path, sample_rate).map(|model| {
             let _ = sender.send(model);
-            Ok(())
         }) {
             error!("{e}");
             if let Err(e) = res_get.get_asr_model().await.and_then(|()| {
-                if let Err(e) = try_default_location(model_path, sample_rate).and_then(|model| {
+                if let Err(e) = try_default_location(model_path, sample_rate).map(|model| {
                     let _ = sender.send(model);
-                    Ok(())
                 }) {
                     error!("{e}");
                     Err(e.into())
