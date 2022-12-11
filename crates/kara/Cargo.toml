@@ -16,7 +16,7 @@ iced_wgpu = { git = "https://github.com/iced-rs/iced", optional = true }
 iced_winit = { git = "https://github.com/iced-rs/iced", optional = true }
 mic-rec = { version = "0.1.0", path = "../mic-rec" }
 notify = "5.0.0"
-palette = "0.6.1"
+palette = { version = "0.6.1", optional = true }
 res-def = { version = "0.1.0", path = "../res-def" }
 res-get = { version = "0.1.0", path = "../res-get" }
 serde = { version = "1.0.147", features = ["derive"] }
@@ -27,5 +27,5 @@ tracing-subscriber = { version = "0.3.16", features = ["local-time", "env-filter
 
 [features]
 default = ["commandline", "graphical"]
-graphical = ["iced_winit", "iced_wgpu", "bytemuck"]
+graphical = ["bytemuck", "iced_wgpu", "iced_winit", "palette"]
 commandline = []
