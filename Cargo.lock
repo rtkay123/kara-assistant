@@ -1996,7 +1996,6 @@ dependencies = [
  "bytemuck",
  "clap",
  "crossbeam-channel",
- "dirs",
  "iced_wgpu",
  "iced_winit",
  "mic-rec",

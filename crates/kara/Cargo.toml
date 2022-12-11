@@ -12,7 +12,6 @@ audio-utils = { version = "0.1.0", path = "../audio-utils" }
 bytemuck = { version = "1.12.2", features = ["derive"], optional = true }
 clap = { version = "4.0.23", features = ["derive"] }
 crossbeam-channel = "0.5.6"
-dirs = "4.0.0"
 iced_wgpu = { git = "https://github.com/iced-rs/iced", optional = true }
 iced_winit = { git = "https://github.com/iced-rs/iced", optional = true }
 mic-rec = { version = "0.1.0", path = "../mic-rec" }

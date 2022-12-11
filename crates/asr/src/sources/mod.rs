@@ -20,6 +20,7 @@ pub enum Source {
         model_path: PathBuf,
 
         #[serde(rename = "fallback-url")]
+        #[serde(default = "vosk_link")]
         fallback_url: String,
     },
 

@@ -26,3 +26,5 @@ pub fn model_path() -> PathBuf {
     data_dir.push("kara/asr");
     data_dir
 }
+
+pub use dirs;

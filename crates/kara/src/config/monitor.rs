@@ -15,7 +15,7 @@ use super::{read_config_file, read_file, Configuration};
 
 #[cfg(feature = "graphical")]
 pub fn monitor_config(event_loop_proxy: Arc<Mutex<EventLoopProxy<KaraEvent>>>) {
-    if let Some(path) = dirs::config_dir() {
+    if let Some(path) = res_def::dirs::config_dir() {
         tokio::task::spawn_blocking(move || {
             if let Err(e) = async_watch(path, event_loop_proxy) {
                 error!("error: {:?}", e)

@@ -263,7 +263,7 @@ fn default_window() -> Window {
 }
 
 pub fn read_config_file() -> Configuration {
-    match dirs::config_dir() {
+    match res_def::dirs::config_dir() {
         Some(mut base) => {
             let mut nested = base.clone();
             nested.push("kara/kara.toml");
