@@ -39,6 +39,14 @@ pub struct Colours {
 
     #[serde(default = "default_foreground")]
     pub foreground: String,
+
+    #[serde(default = "default_background")]
+    #[serde(rename = "progressbar-background")]
+    pub progressbar_background: String,
+
+    #[serde(default = "default_foreground")]
+    #[serde(rename = "progressbar-foreground")]
+    pub progressbar_foreground: String,
 }
 
 impl Default for Colours {
@@ -46,6 +54,8 @@ impl Default for Colours {
         Self {
             background: default_background(),
             foreground: default_foreground(),
+            progressbar_background: default_background(),
+            progressbar_foreground: default_foreground(),
         }
     }
 }
@@ -223,6 +233,29 @@ pub struct Window {
     #[serde(default = "font_size")]
     #[serde(rename = "font-size")]
     pub font_size: u16,
+
+    #[serde(default = "progressbar")]
+    #[serde(rename = "progress-bar")]
+    pub progress_bar: ProgressBar,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct ProgressBar {
+    #[serde(default = "corner_radius")]
+    #[serde(rename = "corner-radius")]
+    pub corner_radius: f32,
+
+    #[serde(default = "pb_height")]
+    pub height: u16,
+}
+
+impl Default for ProgressBar {
+    fn default() -> Self {
+        Self {
+            corner_radius: corner_radius(),
+            height: pb_height(),
+        }
+    }
 }
 
 impl Default for Window {
@@ -233,8 +266,21 @@ impl Default for Window {
             opacity: set_opacity(),
             padding: set_padding(),
             font_size: font_size(),
+            progress_bar: ProgressBar::default(),
         }
     }
+}
+
+fn progressbar() -> ProgressBar {
+    ProgressBar::default()
+}
+
+fn pb_height() -> u16 {
+    14
+}
+
+fn corner_radius() -> f32 {
+    0.0
 }
 
 fn set_padding() -> u16 {

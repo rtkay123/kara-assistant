@@ -1,9 +1,10 @@
 use std::str::FromStr;
 
-use iced_wgpu::Renderer;
+use iced_wgpu::{Renderer, Theme};
 use iced_winit::{
     alignment,
-    widget::{progress_bar, Column, Container, Text},
+    theme::ProgressBar,
+    widget::{progress_bar::StyleSheet, Column, Container, Text},
     Color, Command, Element, Length, Program,
 };
 use palette::Srgb;
@@ -17,7 +18,73 @@ pub struct Controls {
     padding: u16,
     text: String,
     font_size: u16,
-    progress_bar: f32,
+    progress_bar: ProgressBarData,
+}
+
+struct ProgressBarData {
+    progress: f32,
+    background_color: Color,
+    foreground_color: Color,
+    corner_radius: f32,
+    height: u16,
+}
+
+impl ProgressBarData {
+    fn new(
+        background_color: &str,
+        foreground_color: &str,
+        corner_radius: f32,
+        height: u16,
+    ) -> Self {
+        let (bg_r, bg_g, bg_b) = map_colour(background_color, ColourType::Background);
+        let (fg_r, fg_g, fg_b) = map_colour(foreground_color, ColourType::Foreground);
+        Self {
+            progress: 100.0,
+            background_color: Color {
+                r: bg_r,
+                g: bg_g,
+                b: bg_b,
+                a: 1.0,
+            },
+            foreground_color: Color {
+                r: fg_r,
+                g: fg_g,
+                b: fg_b,
+                a: 1.0,
+            },
+            corner_radius,
+            height,
+        }
+    }
+
+    fn update_progress(&mut self, new_value: f32) {
+        self.progress = new_value;
+    }
+
+    fn update_styles(
+        &mut self,
+        background_color: &str,
+        foreground_color: &str,
+        corner_radius: f32,
+        height: u16,
+    ) {
+        let (bg_r, bg_g, bg_b) = map_colour(background_color, ColourType::Background);
+        let (fg_r, fg_g, fg_b) = map_colour(foreground_color, ColourType::Foreground);
+        self.background_color = Color {
+            r: bg_r,
+            g: bg_g,
+            b: bg_b,
+            a: 1.0,
+        };
+        self.foreground_color = Color {
+            r: fg_r,
+            g: fg_g,
+            b: fg_b,
+            a: 1.0,
+        };
+        self.corner_radius = corner_radius;
+        self.height = height;
+    }
 }
 
 impl Controls {
@@ -42,7 +109,12 @@ impl Controls {
             },
             padding: config.window.padding,
             font_size: config.window.font_size,
-            progress_bar: 100.0,
+            progress_bar: ProgressBarData::new(
+                &config.colours.progressbar_background,
+                &config.colours.progressbar_foreground,
+                config.window.progress_bar.corner_radius,
+                config.window.progress_bar.height,
+            ),
         }
     }
 
@@ -83,10 +155,16 @@ impl Program for Controls {
                 };
                 self.padding = config.window.padding;
                 self.font_size = config.window.font_size;
+                self.progress_bar.update_styles(
+                    &config.colours.progressbar_background,
+                    &config.colours.progressbar_foreground,
+                    config.window.progress_bar.corner_radius,
+                    config.window.progress_bar.height,
+                );
             }
             KaraEvent::ReadingSpeech(text) | KaraEvent::FinalisedSpeech(text) => self.text = text,
             KaraEvent::UpdateProgressBar(new_progress) => {
-                self.progress_bar = new_progress;
+                self.progress_bar.update_progress(new_progress);
             }
             _ => {}
         }
@@ -102,11 +180,21 @@ impl Program for Controls {
                     .size(self.font_size),
             )
             .align_items(iced_winit::Alignment::Center);
-        Container::new(if self.progress_bar < 100.0 {
+        let style: Box<dyn StyleSheet<Style = Theme>> = Box::new(MyProgressbarStyle {
+            background: self.progress_bar.background_color,
+            bar: self.progress_bar.foreground_color,
+            radius: self.progress_bar.corner_radius,
+        });
+        Container::new(if self.progress_bar.progress < 100.0 {
             content.push(
                 Column::new()
                     .push("Downloading resourses. Please wait...")
-                    .push(progress_bar(0.0..=100.0, self.progress_bar)),
+                    .spacing(2)
+                    .push(
+                        iced_winit::widget::progress_bar(0.0..=100.0, self.progress_bar.progress)
+                            .height(Length::Units(self.progress_bar.height))
+                            .style(ProgressBar::Custom(style)),
+                    ),
             )
         } else {
             content
@@ -141,4 +229,22 @@ pub(crate) fn map_colour(colours: &str, colour_type: ColourType) -> (f32, f32, f
 
 fn to_float(val: u8) -> f32 {
     val as f32 / 255.0
+}
+
+struct MyProgressbarStyle {
+    background: Color,
+    bar: Color,
+    radius: f32,
+}
+
+impl StyleSheet for MyProgressbarStyle {
+    type Style = iced_winit::Theme;
+
+    fn appearance(&self, _style: &Self::Style) -> iced_winit::widget::progress_bar::Appearance {
+        iced_winit::widget::progress_bar::Appearance {
+            background: iced_winit::Background::Color(self.background),
+            bar: iced_winit::Background::Color(self.bar),
+            border_radius: self.radius,
+        }
+    }
 }
