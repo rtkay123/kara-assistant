@@ -58,7 +58,7 @@ impl ResGet {
     }
 
     pub async fn get_asr_model(&self) -> Result<()> {
-        let buffer_size = 10240;
+        //     let buffer_size = 10240;
         trace!("starting model download");
         create_dir_all(&self.vosk_model.destination).await?;
         let mut path_buf = self.vosk_model.destination.clone();
@@ -93,6 +93,7 @@ impl ResGet {
             Some(content_length) => {
                 let content_length = content_length.to_str()?;
                 let content_length: u64 = content_length.parse()?;
+                let buffer_size = content_length / 100;
                 if accept_range.is_some() {
                     // resume download if file exists
                     // check file size
@@ -118,7 +119,6 @@ impl ResGet {
                     let mut content = content.as_ref();
                     tokio::io::copy(&mut content, &mut outfile).await?;
                     debug!("model downloaded successfully");
-                    println!("params: path_buf {:?}", path_buf);
                     extract_file(
                         file,
                         path_buf.parent().ok_or("no parent")?,
@@ -195,7 +195,7 @@ async fn download_no_resume(
 
     extract_file(
         file,
-        &path_buf.parent().ok_or("no parent")?,
+        path_buf.parent().ok_or("no parent")?,
         &path_buf.display().to_string(),
     )
     .await?;
@@ -207,11 +207,11 @@ async fn download_no_resume(
 struct PartialRangeIter {
     start: u64,
     end: u64,
-    buffer_size: u32,
+    buffer_size: u64,
 }
 
 impl PartialRangeIter {
-    pub fn new(start: u64, end: u64, buffer_size: u32) -> Result<Self> {
+    pub fn new(start: u64, end: u64, buffer_size: u64) -> Result<Self> {
         if buffer_size == 0 {
             Err("invalid buffer_size, give a value greater than zero.")?;
         }
