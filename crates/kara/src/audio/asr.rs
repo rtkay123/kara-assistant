@@ -44,13 +44,13 @@ pub async fn get_remote_model(
                 if let Err(e) = try_default_location(model_path, sample_rate).map(|model| {
                     let _ = sender.send(model);
                 }) {
-                    error!("{e}");
+                    error!("read model error 1: {e}");
                     Err(e.into())
                 } else {
                     Ok(())
                 }
             }) {
-                error!("{e}");
+                error!("read model error 2: {e}");
             }
         }
     });

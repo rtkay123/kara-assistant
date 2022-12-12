@@ -73,10 +73,9 @@ impl ResGet {
             .and_then(|name| if name.is_empty() { None } else { Some(name) })
             .unwrap_or("tmp.zip");
 
-        let mut outfile = OpenOptions::new();
         path_buf.push(file_name);
 
-        let mut outfile = outfile
+        let mut outfile = OpenOptions::new()
             .read(true)
             .append(true)
             .create(true)
@@ -119,6 +118,7 @@ impl ResGet {
                     let mut content = content.as_ref();
                     tokio::io::copy(&mut content, &mut outfile).await?;
                     debug!("model downloaded successfully");
+                    println!("params: path_buf {:?}", path_buf);
                     extract_file(
                         file,
                         path_buf.parent().ok_or("no parent")?,
@@ -164,7 +164,7 @@ async fn download_no_resume(
     file_name: &str,
     progress_sender: &crossbeam_channel::Sender<f32>,
 ) -> Result<()> {
-    trace!("starting no resume download");
+    trace!(file_name = file_name, "starting no resume download");
     let res = client
         .get(url)
         .send()
@@ -174,7 +174,12 @@ async fn download_no_resume(
         .content_length()
         .ok_or(format!("Failed to get content length from '{url}'"))?;
 
-    let mut file = File::create(path_buf).await?;
+    let mut file = tokio::fs::OpenOptions::new()
+        .read(true)
+        .append(true)
+        .create(true)
+        .open(&path_buf)
+        .await?;
     let mut stream = res.bytes_stream();
     let mut downloaded: u64 = 0;
     while let Some(item) = stream.next().await {
@@ -188,7 +193,13 @@ async fn download_no_resume(
 
     debug!("download completed successfully");
 
-    extract_file(file, path_buf.parent().ok_or("no parent")?, file_name).await?;
+    extract_file(
+        file,
+        &path_buf.parent().ok_or("no parent")?,
+        &path_buf.display().to_string(),
+    )
+    .await?;
+
     Ok(())
 }
 
@@ -235,10 +246,12 @@ impl Iterator for PartialRangeIter {
 async fn extract_file(file: File, base_parent: &Path, file_name: &str) -> Result<()> {
     trace!(file = file_name, "attempting extraction");
     use gag::Gag;
-    let file = file.into_std().await;
     let _err_gag = Gag::stderr()?;
     let _print_gag = Gag::stdout()?;
+    trace!("converting to std");
+    let file = file.into_std().await;
 
+    trace!("reading archive");
     let mut archive = ZipArchive::new(file)?;
     for i in 0..archive.len() {
         println!("loop");
