@@ -108,7 +108,7 @@ impl ResGet {
                             let mut content = content.as_ref();
                             tokio::io::copy(&mut content, &mut outfile).await?;
                         }
-                        let new = min(downloaded + buffer_size as u64, content_length);
+                        let new = min(downloaded + buffer_size, content_length);
                         downloaded = new;
                         let progress = downloaded as f32 / content_length as f32 * 100.0;
                         self.progress_sender.send(progress)?;
@@ -230,7 +230,7 @@ impl Iterator for PartialRangeIter {
             None
         } else {
             let prev_start = self.start;
-            self.start += std::cmp::min(self.buffer_size as u64, self.end - self.start + 1);
+            self.start += std::cmp::min(self.buffer_size, self.end - self.start + 1);
             Some(
                 reqwest::header::HeaderValue::from_str(&format!(
                     "bytes={}-{}",

@@ -337,7 +337,7 @@ fn use_default() -> Configuration {
     let bytes = include_str!("../../../../examples/kara.toml");
     match toml::from_str(bytes) {
         Ok(val) => val,
-        Err(e) => panic!("{:#?}", e),
+        Err(e) => panic!("{e:#?}"),
     }
 }
 
