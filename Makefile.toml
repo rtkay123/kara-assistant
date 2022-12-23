@@ -39,7 +39,7 @@ dependencies = [
 
 [tasks.run]
 command = "cargo"
-args = ["run", "--all-features"]
+args = ["run", "--features", "graphical", "--features", "commandline"]
 dependencies = [
   "build"
 ]

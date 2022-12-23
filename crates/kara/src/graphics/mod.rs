@@ -25,9 +25,10 @@ use iced_winit::{
 };
 use tracing::trace;
 
+use crate::config::file::read_config_file;
 use crate::{
     audio::{create_asr_sources, get_audio_device_info, start_listening},
-    config::{read_config_file, Visualiser},
+    config::Visualiser,
     events::KaraEvent,
     graphics::controls::map_colour,
 };
@@ -39,8 +40,8 @@ pub async fn run() -> anyhow::Result<()> {
 
     let event_loop_proxy = Arc::new(Mutex::new(event_loop.create_proxy()));
 
-    crate::config::monitor::monitor_config(Arc::clone(&event_loop_proxy));
-    let config_file = read_config_file();
+    let (config_file, path) = read_config_file(None);
+    crate::config::watch::monitor_config(Arc::clone(&event_loop_proxy), path);
     let (device_name, sample_rate) = get_audio_device_info(&config_file);
 
     let window_settings = &config_file.window;

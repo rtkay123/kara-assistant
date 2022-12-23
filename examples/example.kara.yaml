@@ -1,0 +1,35 @@
+# window:
+#   title: Kara
+#   decorations: false
+#   opacity: 1
+#   padding: 150
+#   font-size: 48
+#   progress-bar:
+#     corner-radius: 0
+#     height: 14
+# audio:
+#   input-device-name: default
+#   sample-rate: 44100
+#   visualiser:
+#     stroke: 1
+#     radius: 0.2
+#     rotation: 0
+#     loudness: 1
+#     buffering: 5
+#     smoothing-size: 10
+#     smoothing-amount: 5
+#     resolution: 3000
+#     density-reduction: 5
+#     top-colour: "#DA294F"
+#     bottom-colour: "#02000D"
+# colours:
+#   background: "#000000"
+#   foreground: "#FFFFFF"
+#   progressbar-background: "#000000"
+#   progressbar-foreground: "#FFFFFF"
+# speech-recognition:
+#   default_source: kara
+#   sources:
+#     - source: kara
+#       model-path: ""
+#       fallback-url: https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip

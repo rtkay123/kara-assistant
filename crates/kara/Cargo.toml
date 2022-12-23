@@ -20,12 +20,17 @@ palette = { version = "0.6.1", optional = true }
 res-def = { version = "0.1.0", path = "../res-def" }
 res-get = { version = "0.1.0", path = "../res-get" }
 serde = { version = "1.0.147", features = ["derive"] }
+serde_json = { version = "1.0.91", optional = true }
+serde_yaml = { version = "0.9.16", optional = true }
 tokio = { version = "1.21.2", features = ["full"] }
-toml = "0.5.9"
+toml = { version = "0.5.9", optional = true }
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["local-time", "env-filter"] }
 
 [features]
-default = ["commandline", "graphical"]
+default = ["commandline", "graphical", "toml"]
 graphical = ["bytemuck", "iced_wgpu", "iced_winit", "palette"]
 commandline = []
+json = ["dep:serde_json"]
+yaml = ["dep:serde_yaml"]
+toml = ["dep:toml"]

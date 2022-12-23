@@ -1,5 +1,5 @@
-pub mod monitor;
-use std::path::Path;
+pub mod file;
+pub mod watch;
 
 use asr::sources::Source;
 use clap::Parser;
@@ -306,48 +306,6 @@ fn set_opacity() -> f32 {
 
 fn default_window() -> Window {
     Window::default()
-}
-
-pub fn read_config_file() -> Configuration {
-    match res_def::dirs::config_dir() {
-        Some(mut base) => {
-            let mut nested = base.clone();
-            nested.push("kara/kara.toml");
-            if nested.exists() {
-                if let Ok(Ok(file)) = read_file(&nested) {
-                    file
-                } else {
-                    try_secondary(&mut base)
-                }
-            } else {
-                try_secondary(&mut base)
-            }
-        }
-        None => use_default(),
-    }
-}
-
-fn read_file(
-    path: impl AsRef<Path>,
-) -> Result<Result<Configuration, toml::de::Error>, std::io::Error> {
-    std::fs::read_to_string(&path).map(|s| toml::from_str::<Configuration>(&s))
-}
-
-fn use_default() -> Configuration {
-    let bytes = include_str!("../../../../examples/kara.toml");
-    match toml::from_str(bytes) {
-        Ok(val) => val,
-        Err(e) => panic!("{e:#?}"),
-    }
-}
-
-fn try_secondary(base: &mut std::path::PathBuf) -> Configuration {
-    base.push("kara.toml");
-    if let Ok(Ok(file)) = read_file(&base) {
-        file
-    } else {
-        use_default()
-    }
 }
 
 pub fn initialise_application() -> Args {
