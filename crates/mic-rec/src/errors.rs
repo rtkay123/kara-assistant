@@ -16,4 +16,6 @@ pub enum StreamOptsError {
     PlayStream(#[from] cpal::PlayStreamError),
     #[error("failed to send the audio feed")]
     AudioFeed,
+    #[error("unsupported sample format `{0}`")]
+    UnsupportedSampleFormat(String),
 }

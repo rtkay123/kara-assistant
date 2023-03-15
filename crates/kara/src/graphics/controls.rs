@@ -192,7 +192,7 @@ impl Program for Controls {
                     .spacing(2)
                     .push(
                         iced_winit::widget::progress_bar(0.0..=100.0, self.progress_bar.progress)
-                            .height(Length::Units(self.progress_bar.height))
+                            .height(Length::Fixed(self.progress_bar.height.into()))
                             .style(ProgressBar::Custom(style)),
                     ),
             )

@@ -60,6 +60,7 @@ impl StreamOpts {
                     }
                 },
                 error_callback,
+                None,
             ),
             SampleFormat::U16 => device.build_input_stream(
                 &config.into(),
@@ -69,6 +70,7 @@ impl StreamOpts {
                     }
                 },
                 error_callback,
+                None,
             ),
             SampleFormat::F32 => device.build_input_stream(
                 &config.into(),
@@ -78,7 +80,13 @@ impl StreamOpts {
                     }
                 },
                 error_callback,
+                None,
             ),
+            sample_format => {
+                return Err(StreamOptsError::UnsupportedSampleFormat(
+                    sample_format.to_string(),
+                ))
+            }
         }?;
 
         info!("stream is ready");

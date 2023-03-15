@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 #apodize = "1.0.0"
 dasp = "0.11.0"
-rustfft = "6.0.1"
+rustfft = "6.1.0"

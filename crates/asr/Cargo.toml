@@ -9,8 +9,8 @@ edition = "2021"
 crossbeam-channel = "0.5.6"
 gag = "1.0.0"
 res-def = { version = "0.1.0", path = "../res-def" }
-serde = { version = "1.0.147", features = ["derive"] }
-thiserror = "1.0.37"
-tokio = { version = "1.21.2", features = ["sync"] }
+serde = { version = "1.0.152", features = ["derive"] }
+thiserror = "1.0.38"
+tokio = { version = "1.25.0", features = ["sync"] }
 tracing = "0.1.37"
 vosk = "0.2.0"
