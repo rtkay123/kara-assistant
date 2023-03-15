@@ -360,7 +360,6 @@ pub async fn run() -> anyhow::Result<()> {
 fn _monitor_refresh_rate(window: &Window) -> u16 {
     let mut monitor: Vec<_> = window
         .available_monitors()
-        .into_iter()
         .filter_map(|f| f.refresh_rate_millihertz().map(|f| f / 1000))
         .collect();
     let refresh_rate = if monitor.is_empty() {
