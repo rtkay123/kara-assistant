@@ -42,7 +42,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_error: true
           clippy_flags: --all-targets --all-features
-        working-directory: ./
+          working-directory: ./
 
   rust:
     runs-on: ubuntu-latest
