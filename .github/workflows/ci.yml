@@ -1,4 +1,4 @@
-name: Build and Test
+name: Build
 
 on:
   push:
@@ -12,6 +12,7 @@ on:
 env:
   CARGO_INCREMENTAL: 0
   CARGO_TERM_COLOR: always
+  NATIVE_DEPS: libasound2-dev
 
 jobs:
   code-style:
@@ -33,6 +34,9 @@ jobs:
 
       - name: Run rustfmt
         run: cargo fmt --all -- --check
+
+      - name: Install apt dependencies
+        run: sudo apt install ${{ env.NATIVE_DEPS }}
 
       - name: Run clippy
         uses: giraffate/clippy-action@v1
@@ -90,6 +94,9 @@ jobs:
         with:
           workspaces: |
             ./
+
+      - name: Install apt packages
+        run: sudo apt install ${{ env.NATIVE_DEPS }}
 
       - name: Compile Tests
         run: cargo test --no-run --all-features
