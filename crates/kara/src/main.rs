@@ -1,7 +1,30 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use kara_recorder::{Samples, Stream};
 use tracing::info;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     init_logger();
+
+    let (audio_tx, audio_rx) = std::sync::mpsc::channel();
+    let wake_word_detected = AtomicBool::new(false);
+
+    let stream = Stream::new(audio_tx, None::<&str>);
+    stream.start();
+
+    loop {
+        // listen for wake word
+        if wake_word_detected.load(Ordering::Relaxed) {
+            while let Ok(format) = audio_rx.recv() {
+                match format {
+                    Samples::F32(_data) => println!("hello f32"),
+                    Samples::I16(_data) => println!("hello i16"),
+                    Samples::U16(_data) => println!("hello u16"),
+                }
+            }
+        }
+    }
 }
 
 fn init_logger() {
