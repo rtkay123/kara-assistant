@@ -14,7 +14,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  lints:
+  code-style:
     runs-on: ubuntu-latest
 
     steps:
@@ -43,8 +43,32 @@ jobs:
           fail_on_error: true
           clippy_flags: --all-targets --all-features
           working-directory: ./
+  msrv:
+    runs-on: ubuntu-latest
+    # we use a matrix here just because env can't be used in job names
+    # https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
+    strategy:
+      matrix:
+        msrv: [1.56.1] # 2021 edition requires 1.56
+    name: ubuntu / ${{ matrix.msrv }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Install ${{ matrix.msrv }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.msrv }}
 
-  rust:
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ./
+
+      - name: cargo +${{ matrix.msrv }} check
+        run: cargo check
+
+  build:
     runs-on: ubuntu-latest
 
     strategy:
