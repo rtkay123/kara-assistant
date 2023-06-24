@@ -27,6 +27,9 @@ jobs:
           components: 'rustfmt, clippy'
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            ./
 
       - name: Run rustfmt
         run: cargo fmt --all -- --check
@@ -39,6 +42,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_error: true
           clippy_flags: --all-targets --all-features
+        working-directory: ./
 
   rust:
     runs-on: ubuntu-latest
@@ -59,12 +63,13 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
 
       - uses: Swatinem/rust-cache@v2
-
-      - name: Install cargo-make
-        run: cargo install --debug cargo-make
+        with:
+          workspaces: |
+            ./
 
       - name: Compile Tests
         run: cargo test --no-run --all-features
+        working-directory: ./
 
       - name: Test
         run: cargo test --all-features
